@@ -1,7 +1,10 @@
 'use client';
 
-import { Bell, RefreshCw } from 'lucide-react';
+import { Bell, RefreshCw, Search } from 'lucide-react';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 export function Header() {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -13,31 +16,47 @@ export function Header() {
   };
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">Dashboard</h2>
-        <p className="text-sm text-gray-500">
-          Son guncelleme: {new Date().toLocaleTimeString('tr-TR')}
-        </p>
+    <header className="flex h-16 items-center justify-between border-b bg-card px-6">
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Ara..."
+            className="w-64 pl-9"
+          />
+        </div>
       </div>
 
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center gap-2">
+        <div className="mr-4 text-right">
+          <p className="text-sm font-medium">Dashboard</p>
+          <p className="text-xs text-muted-foreground">
+            Son güncelleme: {new Date().toLocaleTimeString('tr-TR')}
+          </p>
+        </div>
+
         {/* Refresh Button */}
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={handleRefresh}
           disabled={isRefreshing}
-          className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
         >
           <RefreshCw
             className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`}
           />
-        </button>
+        </Button>
 
         {/* Notifications */}
-        <button className="relative rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500">
+        <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500"></span>
-        </button>
+          <Badge
+            variant="destructive"
+            className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
+          >
+            3
+          </Badge>
+        </Button>
       </div>
     </header>
   );
