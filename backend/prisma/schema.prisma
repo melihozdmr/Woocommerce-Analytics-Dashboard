@@ -1,0 +1,182 @@
+// Prisma Schema for WooCommerce Analytics Dashboard
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PlanType {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String?
+  role          UserRole  @default(USER)
+  planId        String    @map("plan_id")
+  grandfathered Boolean   @default(false)
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  plan   Plan    @relation(fields: [planId], references: [id])
+  stores Store[]
+
+  @@map("users")
+}
+
+model Plan {
+  id              String   @id @default(cuid())
+  name            PlanType @unique
+  displayName     String   @map("display_name")
+  storeLimit      Int      @map("store_limit")
+  refreshInterval Int      @default(15) @map("refresh_interval") // dakika
+  historyDays     Int      @default(30) @map("history_days")
+  priceMonthly    Decimal  @default(0) @map("price_monthly") @db.Decimal(10, 2)
+  priceYearly     Decimal  @default(0) @map("price_yearly") @db.Decimal(10, 2)
+  features        Json     @default("{}")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  users User[]
+
+  @@map("plans")
+}
+
+model Store {
+  id             String      @id @default(cuid())
+  userId         String      @map("user_id")
+  name           String
+  url            String
+  consumerKey    String      @map("consumer_key") // Encrypted
+  consumerSecret String      @map("consumer_secret") // Encrypted
+  commissionRate Decimal     @default(0) @map("commission_rate") @db.Decimal(5, 2) // 0-100%
+  shippingCost   Decimal     @default(0) @map("shipping_cost") @db.Decimal(10, 2) // TL
+  currency       String      @default("TRY")
+  status         StoreStatus @default(ACTIVE)
+  lastSyncAt     DateTime?   @map("last_sync_at")
+  syncError      String?     @map("sync_error")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyticsCache AnalyticsCache[]
+  products       Product[]
+  orders         Order[]
+
+  @@map("stores")
+}
+
+model Product {
+  id            String   @id @default(cuid())
+  storeId       String   @map("store_id")
+  wcProductId   Int      @map("wc_product_id") // WooCommerce product ID
+  name          String
+  sku           String?
+  price         Decimal  @default(0) @db.Decimal(10, 2) // Satış fiyatı
+  purchasePrice Decimal? @map("purchase_price") @db.Decimal(10, 2) // Alış fiyatı
+  stockQuantity Int      @default(0) @map("stock_quantity")
+  stockStatus   String   @default("instock") @map("stock_status")
+  isActive      Boolean  @default(true) @map("is_active")
+  syncedAt      DateTime @default(now()) @map("synced_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, wcProductId])
+  @@map("products")
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  storeId         String   @map("store_id")
+  wcOrderId       Int      @map("wc_order_id") // WooCommerce order ID
+  orderNumber     String   @map("order_number")
+  status          String   // completed, processing, pending, cancelled, refunded
+  total           Decimal  @db.Decimal(10, 2)
+  subtotal        Decimal  @db.Decimal(10, 2)
+  totalTax        Decimal  @default(0) @map("total_tax") @db.Decimal(10, 2)
+  shippingTotal   Decimal  @default(0) @map("shipping_total") @db.Decimal(10, 2)
+  discountTotal   Decimal  @default(0) @map("discount_total") @db.Decimal(10, 2)
+  paymentMethod   String?  @map("payment_method")
+  customerEmail   String?  @map("customer_email")
+  customerName    String?  @map("customer_name")
+  itemsCount      Int      @default(0) @map("items_count")
+  orderDate       DateTime @map("order_date")
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, wcOrderId])
+  @@index([storeId, orderDate])
+  @@index([storeId, status])
+  @@map("orders")
+}
+
+model AnalyticsCache {
+  id        String   @id @default(cuid())
+  storeId   String   @map("store_id")
+  dataType  String   @map("data_type") // inventory, orders, payments, profits, refunds
+  dataJson  Json     @map("data_json")
+  period    String?  // today, 7d, 30d, 365d, all
+  fetchedAt DateTime @default(now()) @map("fetched_at")
+  expiresAt DateTime @map("expires_at")
+
+  // Relations
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, dataType, period])
+  @@map("analytics_cache")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
