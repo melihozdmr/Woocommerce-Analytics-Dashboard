@@ -10,7 +10,7 @@ Bu dokuman, projenin tum gelistirme surecinde uyulmasi gereken kurallari icerir.
 |--------|-----------|--------|
 | **Dil** | TypeScript | Strict mode aktif |
 | **Frontend** | Next.js 14+ | React 18+ |
-| **Backend** | Node.js 20+ | Express.js veya Fastify |
+| **Backend** | Node.js 20+ | NestJS 10+ |
 | **ORM** | Prisma / Drizzle / TypeORM / MikroORM | Tercih: Prisma |
 | **Database** | PostgreSQL 15+ | Primary DB |
 | **Cache** | Redis 7+ | Session & Cache |
