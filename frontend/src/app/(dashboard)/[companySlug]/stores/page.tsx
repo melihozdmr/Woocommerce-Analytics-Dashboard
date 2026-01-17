@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Loader2,
   Loader,
@@ -15,9 +15,9 @@ import {
   Layers,
   ShoppingCart,
   Database,
-  Settings,
   Percent,
   Truck,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -108,7 +108,9 @@ export default function StoresPage() {
     saved: boolean;
     error: string | null;
   }>>({});
-  const debounceTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const [settingsModalStoreId, setSettingsModalStoreId] = useState<string | null>(null);
+  const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const totalSteps = selectedMarketplace?.steps?.length || 0;
   const isLastStep = currentStep === totalSteps; // Test step
@@ -130,6 +132,80 @@ export default function StoresPage() {
 
     return () => clearInterval(interval);
   }, [stores, currentCompany?.id, fetchStores]);
+
+  // Settings state'i store'lardan başlat
+  useEffect(() => {
+    const newState: typeof settingsState = {};
+    stores.forEach((store) => {
+      if (!settingsState[store.id]) {
+        newState[store.id] = {
+          commissionRate: String(store.commissionRate || 0),
+          shippingCost: String(store.shippingCost || 0),
+          saving: false,
+          saved: false,
+          error: null,
+        };
+      } else {
+        newState[store.id] = settingsState[store.id];
+      }
+    });
+    if (Object.keys(newState).length > 0) {
+      setSettingsState((prev) => ({ ...prev, ...newState }));
+    }
+  }, [stores]);
+
+  // Settings input change handler
+  const handleSettingsChange = (storeId: string, field: 'commissionRate' | 'shippingCost', value: string) => {
+    // Only allow numbers and decimal point
+    const cleanValue = value.replace(/[^0-9.]/g, '');
+
+    setSettingsState((prev) => ({
+      ...prev,
+      [storeId]: { ...prev[storeId], [field]: cleanValue, saved: false },
+    }));
+  };
+
+  // Manual save function
+  const handleSaveSettings = async (storeId: string) => {
+    if (!currentCompany?.id) return;
+
+    const state = settingsState[storeId];
+    if (!state) return;
+
+    setSettingsState((prev) => ({
+      ...prev,
+      [storeId]: { ...prev[storeId], saving: true, saved: false, error: null },
+    }));
+
+    try {
+      const commissionRate = parseFloat(state.commissionRate) || 0;
+      const shippingCost = parseFloat(state.shippingCost) || 0;
+
+      // Validation
+      if (commissionRate < 0 || commissionRate > 100) {
+        throw new Error('Komisyon oranı 0-100 arasında olmalı');
+      }
+      if (shippingCost < 0 || shippingCost > 10000) {
+        throw new Error('Kargo maliyeti 0-10000 arasında olmalı');
+      }
+
+      await updateStore(currentCompany.id, storeId, { commissionRate, shippingCost });
+
+      setSettingsState((prev) => ({
+        ...prev,
+        [storeId]: { ...prev[storeId], saving: false, saved: true, error: null },
+      }));
+
+      toast.success('Ayarlar kaydedildi');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Kaydetme başarısız';
+      setSettingsState((prev) => ({
+        ...prev,
+        [storeId]: { ...prev[storeId], saving: false, saved: false, error: errorMessage },
+      }));
+      toast.error(errorMessage);
+    }
+  };
 
   const handleMarketplaceClick = (marketplace: typeof marketplaces[0]) => {
     if (marketplace.comingSoon) return;
@@ -232,14 +308,18 @@ export default function StoresPage() {
     }
   };
 
-  const handleDelete = async (storeId: string) => {
-    if (!currentCompany?.id) return;
+  const handleDeleteConfirm = async () => {
+    if (!currentCompany?.id || !deleteConfirmStoreId) return;
 
+    setIsDeleting(true);
     try {
-      await deleteStore(currentCompany.id, storeId);
+      await deleteStore(currentCompany.id, deleteConfirmStoreId);
       toast.success('Mağaza bağlantısı kesildi');
+      setDeleteConfirmStoreId(null);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Mağaza silinemedi');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -364,10 +444,20 @@ export default function StoresPage() {
                       </a>
                     </div>
                   </div>
-                  <Switch
-                    checked={store.status === 'ACTIVE'}
-                    onCheckedChange={() => handleStatusToggle(store.id, store.status)}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground"
+                      onClick={() => setSettingsModalStoreId(store.id)}
+                    >
+                      <Settings className="h-4 w-4" />
+                    </Button>
+                    <Switch
+                      checked={store.status === 'ACTIVE'}
+                      onCheckedChange={() => handleStatusToggle(store.id, store.status)}
+                    />
+                  </div>
                 </div>
 
                 {/* Sync Info or Sync Progress */}
@@ -449,7 +539,7 @@ export default function StoresPage() {
                         variant="ghost"
                         size="icon"
                         className="text-muted-foreground hover:text-destructive"
-                        onClick={() => handleDelete(store.id)}
+                        onClick={() => setDeleteConfirmStoreId(store.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -725,6 +815,152 @@ export default function StoresPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Modal */}
+      <Dialog open={!!settingsModalStoreId} onOpenChange={(open) => !open && setSettingsModalStoreId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Mağaza Ayarları
+            </DialogTitle>
+          </DialogHeader>
+          {settingsModalStoreId && settingsState[settingsModalStoreId] && (
+            <div className="space-y-4 py-4">
+              {/* Store Info */}
+              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                <img
+                  src="https://cdn.worldvectorlogo.com/logos/woocommerce.svg"
+                  alt="WooCommerce"
+                  className="w-8 h-8 object-contain"
+                />
+                <div>
+                  <p className="font-medium text-sm">
+                    {stores.find((s) => s.id === settingsModalStoreId)?.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {stores.find((s) => s.id === settingsModalStoreId)?.url.replace(/^https?:\/\//, '')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Commission Rate */}
+              <div className="space-y-2">
+                <Label htmlFor="commission" className="flex items-center gap-2">
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                  Komisyon Oranı
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="commission"
+                    type="text"
+                    inputMode="decimal"
+                    value={settingsState[settingsModalStoreId].commissionRate}
+                    onChange={(e) => handleSettingsChange(settingsModalStoreId, 'commissionRate', e.target.value)}
+                    placeholder="0"
+                    className="pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pazaryeri komisyon oranı (0-100 arası)
+                </p>
+              </div>
+
+              {/* Shipping Cost */}
+              <div className="space-y-2">
+                <Label htmlFor="shipping" className="flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                  Kargo Maliyeti
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="shipping"
+                    type="text"
+                    inputMode="decimal"
+                    value={settingsState[settingsModalStoreId].shippingCost}
+                    onChange={(e) => handleSettingsChange(settingsModalStoreId, 'shippingCost', e.target.value)}
+                    placeholder="0"
+                    className="pr-8"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">TL</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sabit kargo maliyeti (sipariş başına)
+                </p>
+              </div>
+
+              {/* Last Updated */}
+              <p className="text-xs text-muted-foreground text-center">
+                Son güncelleme: {new Date(stores.find((s) => s.id === settingsModalStoreId)?.updatedAt || '').toLocaleString('tr-TR')}
+              </p>
+
+              {/* Save Button */}
+              <Button
+                className="w-full"
+                onClick={() => handleSaveSettings(settingsModalStoreId)}
+                disabled={settingsState[settingsModalStoreId].saving}
+              >
+                {settingsState[settingsModalStoreId].saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  'Kaydet'
+                )}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirmStoreId} onOpenChange={(open) => !open && setDeleteConfirmStoreId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Mağazayı Sil
+            </DialogTitle>
+          </DialogHeader>
+          {deleteConfirmStoreId && (
+            <div className="space-y-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  {stores.find((s) => s.id === deleteConfirmStoreId)?.name}
+                </span>{' '}
+                mağazasını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setDeleteConfirmStoreId(null)}
+                  disabled={isDeleting}
+                >
+                  İptal
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Siliniyor...
+                    </>
+                  ) : (
+                    'Evet, Sil'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

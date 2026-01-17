@@ -270,3 +270,17 @@ model RefreshToken {
   @@index([userId])
   @@map("refresh_tokens")
 }
+
+model StoreSettingsLog {
+  id         String   @id @default(cuid())
+  storeId    String   @map("store_id")
+  userId     String   @map("user_id")
+  field      String   // commissionRate, shippingCost
+  oldValue   String   @map("old_value")
+  newValue   String   @map("new_value")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([storeId])
+  @@index([userId])
+  @@map("store_settings_logs")
+}

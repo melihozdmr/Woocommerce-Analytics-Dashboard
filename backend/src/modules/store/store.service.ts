@@ -225,6 +225,7 @@ export class StoreService implements OnModuleInit {
     }
 
     const updateData: any = {};
+    const settingsLogs: { field: string; oldValue: string; newValue: string }[] = [];
 
     if (dto.name) updateData.name = dto.name;
     if (dto.url) {
@@ -242,9 +243,25 @@ export class StoreService implements OnModuleInit {
       updateData.consumerSecret = encrypt(dto.consumerSecret, this.encryptionKey);
     }
     if (dto.commissionRate !== undefined) {
+      // Audit log for commission rate change
+      if (Number(store.commissionRate) !== dto.commissionRate) {
+        settingsLogs.push({
+          field: 'commissionRate',
+          oldValue: String(store.commissionRate),
+          newValue: String(dto.commissionRate),
+        });
+      }
       updateData.commissionRate = dto.commissionRate;
     }
     if (dto.shippingCost !== undefined) {
+      // Audit log for shipping cost change
+      if (Number(store.shippingCost) !== dto.shippingCost) {
+        settingsLogs.push({
+          field: 'shippingCost',
+          oldValue: String(store.shippingCost),
+          newValue: String(dto.shippingCost),
+        });
+      }
       updateData.shippingCost = dto.shippingCost;
     }
     if (dto.status) {
@@ -266,6 +283,19 @@ export class StoreService implements OnModuleInit {
         updatedAt: true,
       },
     });
+
+    // Create audit logs for settings changes
+    if (settingsLogs.length > 0) {
+      await this.prisma.storeSettingsLog.createMany({
+        data: settingsLogs.map((log) => ({
+          storeId,
+          userId,
+          field: log.field,
+          oldValue: log.oldValue,
+          newValue: log.newValue,
+        })),
+      });
+    }
 
     return updatedStore;
   }
@@ -438,7 +468,9 @@ export class StoreService implements OnModuleInit {
         data: { syncProductsCount: products.length },
       });
 
-      let variationsCount = 0;
+      // 1. ADIM: Önce TÜM ürünleri kaydet
+      const savedProducts: Map<number, string> = new Map(); // wcProductId -> savedProductId
+      const variableProductIds: number[] = [];
 
       for (const product of products) {
         const savedProduct = await this.prisma.product.upsert({
@@ -473,13 +505,28 @@ export class StoreService implements OnModuleInit {
           },
         });
 
-        // Eğer variable ürünse, varyasyonları da çek
+        savedProducts.set(product.id, savedProduct.id);
+
+        // Variable ürünleri kaydet, sonra varyasyonlarını çekeceğiz
         if (product.type === 'variable') {
-          await this.prisma.store.update({
-            where: { id: store.id },
-            data: { syncStep: 'variations' },
-          });
-          const variations = await client.getProductVariations(product.id);
+          variableProductIds.push(product.id);
+        }
+      }
+
+      // 2. ADIM: Şimdi varyasyonları çek (tüm ürünler kaydedildikten sonra)
+      let variationsCount = 0;
+
+      if (variableProductIds.length > 0) {
+        await this.prisma.store.update({
+          where: { id: store.id },
+          data: { syncStep: 'variations' },
+        });
+
+        for (const wcProductId of variableProductIds) {
+          const savedProductId = savedProducts.get(wcProductId);
+          if (!savedProductId) continue;
+
+          const variations = await client.getProductVariations(wcProductId);
           variationsCount += variations.length;
 
           // Varyasyon sayısını güncelle
@@ -503,7 +550,7 @@ export class StoreService implements OnModuleInit {
             await this.prisma.productVariation.upsert({
               where: {
                 productId_wcVariationId: {
-                  productId: savedProduct.id,
+                  productId: savedProductId,
                   wcVariationId: variation.id,
                 },
               },
@@ -519,7 +566,7 @@ export class StoreService implements OnModuleInit {
                 syncedAt: new Date(),
               },
               create: {
-                productId: savedProduct.id,
+                productId: savedProductId,
                 wcVariationId: variation.id,
                 sku: variation.sku || null,
                 price: parseFloat(variation.price) || 0,

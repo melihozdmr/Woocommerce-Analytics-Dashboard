@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Package,
@@ -18,6 +18,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { useCompanyStore } from '@/stores/companyStore';
+import { useStoreStore } from '@/stores/storeStore';
 
 const stats = [
   {
@@ -85,7 +87,7 @@ function SetupAlert() {
       <div className="flex items-center gap-2">
         <Store className="h-4 w-4" />
         <span className="text-sm font-medium">
-          Başlamak için mağazanızı bağlayın
+          İlk mağazanızı bağlayın
         </span>
       </div>
       <Button
@@ -100,13 +102,22 @@ function SetupAlert() {
 }
 
 export default function DashboardPage() {
-  // TODO: Check if user has completed setup from API
-  const [hasCompletedSetup] = useState(false);
+  const { currentCompany } = useCompanyStore();
+  const { stores, fetchStores } = useStoreStore();
+
+  // Fetch stores on mount
+  useEffect(() => {
+    if (currentCompany?.id) {
+      fetchStores(currentCompany.id);
+    }
+  }, [currentCompany?.id, fetchStores]);
+
+  const hasStores = stores.length > 0;
 
   return (
     <>
-      {/* Setup Alert - show if no store connected */}
-      {!hasCompletedSetup && <SetupAlert />}
+      {/* Setup Alert - show only if no store connected */}
+      {!hasStores && <SetupAlert />}
 
       {/* Stats Grid - Empty State */}
       <div className="grid grid-cols-2 lg:grid-cols-4">

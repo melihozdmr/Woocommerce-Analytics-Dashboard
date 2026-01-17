@@ -5,13 +5,12 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../database/prisma.service';
+import { EmailService } from '../email/email.service';
 
 jest.mock('bcrypt');
 
 describe('AuthService', () => {
   let service: AuthService;
-  let prismaService: PrismaService;
-  let jwtService: JwtService;
 
   const mockPrismaService = {
     user: {
@@ -46,6 +45,10 @@ describe('AuthService', () => {
     }),
   };
 
+  const mockEmailService = {
+    sendVerificationCode: jest.fn().mockResolvedValue(true),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -53,12 +56,11 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    prismaService = module.get<PrismaService>(PrismaService);
-    jwtService = module.get<JwtService>(JwtService);
   });
 
   afterEach(() => {
@@ -76,13 +78,14 @@ describe('AuthService', () => {
       password: 'Test1234',
     };
 
-    it('should register a new user successfully', async () => {
+    it('should register a new user and require email verification', async () => {
       const mockPlan = { id: 'plan-id', name: 'FREE' };
       const mockUser = {
         id: 'user-id',
         email: registerDto.email,
         name: registerDto.name,
         role: 'USER',
+        isEmailVerified: false,
         plan: mockPlan,
       };
 
@@ -90,20 +93,37 @@ describe('AuthService', () => {
       mockPrismaService.plan.findFirst.mockResolvedValue(mockPlan);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       mockPrismaService.user.create.mockResolvedValue(mockUser);
-      mockJwtService.signAsync
-        .mockResolvedValueOnce('access-token')
-        .mockResolvedValueOnce('refresh-token');
-      mockPrismaService.refreshToken.create.mockResolvedValue({});
+      mockPrismaService.user.update.mockResolvedValue(mockUser);
 
       const result = await service.register(registerDto);
 
-      expect(result.user.email).toBe(registerDto.email);
-      expect(result.accessToken).toBe('access-token');
-      expect(result.refreshToken).toBe('refresh-token');
+      expect(result.requiresVerification).toBe(true);
+      expect(result.email).toBe(registerDto.email);
+      expect(mockEmailService.sendVerificationCode).toHaveBeenCalled();
     });
 
-    it('should throw ConflictException if email already exists', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'existing-user' });
+    it('should resend verification code if user exists but email not verified', async () => {
+      const existingUser = {
+        id: 'existing-user',
+        email: registerDto.email,
+        isEmailVerified: false,
+      };
+
+      mockPrismaService.user.findUnique.mockResolvedValue(existingUser);
+      mockPrismaService.user.update.mockResolvedValue(existingUser);
+
+      const result = await service.register(registerDto);
+
+      expect(result.requiresVerification).toBe(true);
+      expect(mockEmailService.sendVerificationCode).toHaveBeenCalled();
+    });
+
+    it('should throw ConflictException if email already verified', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'existing-user',
+        email: registerDto.email,
+        isEmailVerified: true,
+      });
 
       await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
     });
@@ -122,10 +142,11 @@ describe('AuthService', () => {
       password: 'hashed-password',
       role: 'USER',
       isActive: true,
+      isEmailVerified: true,
       plan: { id: 'plan-id', name: 'FREE' },
     };
 
-    it('should login successfully with valid credentials', async () => {
+    it('should login successfully with verified email', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockJwtService.signAsync
@@ -135,8 +156,20 @@ describe('AuthService', () => {
 
       const result = await service.login(loginDto);
 
-      expect(result.user.email).toBe(loginDto.email);
+      expect(result.user?.email).toBe(loginDto.email);
       expect(result.accessToken).toBe('access-token');
+    });
+
+    it('should require verification if email not verified', async () => {
+      const unverifiedUser = { ...mockUser, isEmailVerified: false };
+      mockPrismaService.user.findUnique.mockResolvedValue(unverifiedUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockPrismaService.user.update.mockResolvedValue(unverifiedUser);
+
+      const result = await service.login(loginDto);
+
+      expect(result.requiresVerification).toBe(true);
+      expect(result.email).toBe(loginDto.email);
     });
 
     it('should throw UnauthorizedException for invalid email', async () => {
