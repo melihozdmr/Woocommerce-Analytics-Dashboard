@@ -1,12 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
+import { EmailModule } from './modules/email/email.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CompanyModule } from './modules/company/company.module';
+import { StoreModule } from './modules/store/store.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -31,12 +35,20 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
       ],
     }),
 
+    // Scheduler
+    ScheduleModule.forRoot(),
+
     // Database
     DatabaseModule,
+
+    // Email
+    EmailModule,
 
     // Feature Modules
     HealthModule,
     AuthModule,
+    CompanyModule,
+    StoreModule,
   ],
   providers: [
     // Global Exception Filter

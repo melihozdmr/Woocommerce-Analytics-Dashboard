@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
+import { EmailService } from '../email/email.service';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { randomUUID } from 'crypto';
 
@@ -18,7 +19,29 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {}
+
+  private generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  async checkEmail(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      select: { id: true, isEmailVerified: true },
+    });
+
+    if (!user) {
+      return { exists: false, status: 'not_found' };
+    }
+
+    if (!user.isEmailVerified) {
+      return { exists: true, status: 'needs_verification' };
+    }
+
+    return { exists: true, status: 'verified' };
+  }
 
   async register(dto: RegisterDto) {
     const existingUser = await this.prisma.user.findUnique({
@@ -26,10 +49,37 @@ export class AuthService {
     });
 
     if (existingUser) {
+      if (!existingUser.isEmailVerified) {
+        // Resend verification code
+        const verificationCode = this.generateVerificationCode();
+        const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+        await this.prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            emailVerificationCode: verificationCode,
+            emailVerificationExpiry: verificationExpiry,
+          },
+        });
+
+        await this.emailService.sendVerificationCode(
+          existingUser.email,
+          verificationCode,
+          existingUser.name || undefined,
+        );
+
+        return {
+          message: 'Doğrulama kodu e-posta adresinize gönderildi',
+          email: existingUser.email,
+          requiresVerification: true,
+        };
+      }
       throw new ConflictException('Bu e-posta adresi zaten kullanılıyor');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 12);
+    const verificationCode = this.generateVerificationCode();
+    const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     const freePlan = await this.prisma.plan.findFirst({
       where: { name: 'FREE' },
@@ -41,10 +91,64 @@ export class AuthService {
         name: dto.name,
         password: hashedPassword,
         planId: freePlan?.id,
+        isEmailVerified: false,
+        emailVerificationCode: verificationCode,
+        emailVerificationExpiry: verificationExpiry,
       },
       include: { plan: true },
     });
 
+    // Send verification email
+    await this.emailService.sendVerificationCode(
+      user.email,
+      verificationCode,
+      user.name || undefined,
+    );
+
+    return {
+      message: 'Kayıt başarılı. Doğrulama kodu e-posta adresinize gönderildi',
+      email: user.email,
+      requiresVerification: true,
+    };
+  }
+
+  async verifyEmail(email: string, code: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { plan: true, currentCompany: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('E-posta zaten doğrulanmış');
+    }
+
+    if (!user.emailVerificationCode || !user.emailVerificationExpiry) {
+      throw new BadRequestException('Doğrulama kodu bulunamadı');
+    }
+
+    if (user.emailVerificationExpiry < new Date()) {
+      throw new BadRequestException('Doğrulama kodunun süresi dolmuş');
+    }
+
+    if (user.emailVerificationCode !== code) {
+      throw new BadRequestException('Geçersiz doğrulama kodu');
+    }
+
+    // Verify email and clear verification data
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        emailVerificationCode: null,
+        emailVerificationExpiry: null,
+      },
+    });
+
+    // Generate tokens
     const tokens = await this.generateTokens(user.id, user.email);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
@@ -55,15 +159,51 @@ export class AuthService {
         name: user.name,
         role: user.role,
         plan: user.plan,
+        currentCompanyId: user.currentCompanyId,
       },
       ...tokens,
+    };
+  }
+
+  async resendVerificationCode(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    if (user.isEmailVerified) {
+      throw new BadRequestException('E-posta zaten doğrulanmış');
+    }
+
+    const verificationCode = this.generateVerificationCode();
+    const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerificationCode: verificationCode,
+        emailVerificationExpiry: verificationExpiry,
+      },
+    });
+
+    await this.emailService.sendVerificationCode(
+      user.email,
+      verificationCode,
+      user.name || undefined,
+    );
+
+    return {
+      message: 'Yeni doğrulama kodu gönderildi',
     };
   }
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { plan: true },
+      include: { plan: true, currentCompany: true },
     });
 
     if (!user) {
@@ -80,6 +220,33 @@ export class AuthService {
       throw new UnauthorizedException('E-posta veya şifre hatalı');
     }
 
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      // Generate new verification code and send
+      const verificationCode = this.generateVerificationCode();
+      const verificationExpiry = new Date(Date.now() + 15 * 60 * 1000);
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailVerificationCode: verificationCode,
+          emailVerificationExpiry: verificationExpiry,
+        },
+      });
+
+      await this.emailService.sendVerificationCode(
+        user.email,
+        verificationCode,
+        user.name || undefined,
+      );
+
+      return {
+        message: 'E-posta adresiniz doğrulanmamış. Doğrulama kodu gönderildi.',
+        email: user.email,
+        requiresVerification: true,
+      };
+    }
+
     const tokens = await this.generateTokens(
       user.id,
       user.email,
@@ -94,6 +261,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         plan: user.plan,
+        currentCompanyId: user.currentCompanyId,
       },
       ...tokens,
     };
@@ -113,7 +281,7 @@ export class AuthService {
   async refreshTokens(dto: RefreshTokenDto) {
     const storedToken = await this.prisma.refreshToken.findUnique({
       where: { token: dto.refreshToken },
-      include: { user: { include: { plan: true } } },
+      include: { user: { include: { plan: true, currentCompany: true } } },
     });
 
     if (!storedToken) {
@@ -149,6 +317,7 @@ export class AuthService {
         name: user.name,
         role: user.role,
         plan: user.plan,
+        currentCompanyId: user.currentCompanyId,
       },
       ...tokens,
     };
@@ -175,9 +344,12 @@ export class AuthService {
       },
     });
 
-    // TODO: Send email with reset link
-    // For now, just return success message
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Send password reset email
+    await this.emailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      user.name || undefined,
+    );
 
     return { message: 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi' };
   }
@@ -216,7 +388,7 @@ export class AuthService {
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { plan: true },
+      include: { plan: true, currentCompany: true },
     });
 
     if (!user) {
@@ -229,6 +401,7 @@ export class AuthService {
       name: user.name,
       role: user.role,
       plan: user.plan,
+      currentCompanyId: user.currentCompanyId,
       createdAt: user.createdAt,
     };
   }

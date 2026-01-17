@@ -2,6 +2,55 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003/api';
 
+// Helper function to get tokens from Zustand persist storage
+const getAuthTokens = (): { accessToken: string | null; refreshToken: string | null } => {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      return {
+        accessToken: parsed?.state?.accessToken || null,
+        refreshToken: parsed?.state?.refreshToken || null,
+      };
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+  return { accessToken: null, refreshToken: null };
+};
+
+// Helper function to update tokens in Zustand persist storage
+const updateAuthTokens = (accessToken: string, refreshToken?: string) => {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      parsed.state.accessToken = accessToken;
+      if (refreshToken) {
+        parsed.state.refreshToken = refreshToken;
+      }
+      localStorage.setItem('auth-storage', JSON.stringify(parsed));
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+};
+
+// Helper function to clear tokens from Zustand persist storage
+const clearAuthTokens = () => {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const parsed = JSON.parse(authStorage);
+      parsed.state.accessToken = null;
+      parsed.state.refreshToken = null;
+      localStorage.setItem('auth-storage', JSON.stringify(parsed));
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+};
+
 export const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -13,9 +62,9 @@ export const api = axios.create({
 // Request interceptor for adding auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('accessToken');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const { accessToken } = getAuthTokens();
+    if (accessToken && config.headers) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
@@ -37,27 +86,23 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       // Try to refresh token
-      const refreshToken = localStorage.getItem('refreshToken');
+      const { refreshToken } = getAuthTokens();
       if (refreshToken) {
         try {
           const response = await axios.post(`${API_URL}/auth/refresh`, {
             refreshToken,
           });
-          const { accessToken } = response.data;
-          localStorage.setItem('accessToken', accessToken);
+          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          updateAuthTokens(accessToken, newRefreshToken);
 
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           }
           return api(originalRequest);
         } catch (refreshError) {
-          // Refresh failed, clear tokens and redirect to login
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
+          // Refresh failed, clear tokens - let AuthGuard handle redirect
+          clearAuthTokens();
         }
-      } else {
-        window.location.href = '/login';
       }
     }
 

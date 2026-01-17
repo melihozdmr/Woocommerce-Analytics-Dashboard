@@ -1,0 +1,293 @@
+'use client';
+
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import {
+  Package,
+  ShoppingCart,
+  TrendingUp,
+  AlertTriangle,
+  BarChart3,
+  Store,
+} from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Button } from '@/components/ui/button';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+
+const stats = [
+  {
+    name: 'Toplam Stok',
+    value: '-',
+    icon: Package,
+  },
+  {
+    name: 'Bugünün Satışı',
+    value: '-',
+    icon: ShoppingCart,
+  },
+  {
+    name: 'Toplam Kâr',
+    value: '-',
+    icon: TrendingUp,
+  },
+  {
+    name: 'Kritik Stok',
+    value: '-',
+    icon: AlertTriangle,
+  },
+];
+
+// Sample chart data
+const salesChartData = [
+  { month: 'Oca', sales: 0 },
+  { month: 'Şub', sales: 0 },
+  { month: 'Mar', sales: 0 },
+  { month: 'Nis', sales: 0 },
+  { month: 'May', sales: 0 },
+  { month: 'Haz', sales: 0 },
+];
+
+const ordersChartData = [
+  { month: 'Oca', orders: 0 },
+  { month: 'Şub', orders: 0 },
+  { month: 'Mar', orders: 0 },
+  { month: 'Nis', orders: 0 },
+  { month: 'May', orders: 0 },
+  { month: 'Haz', orders: 0 },
+];
+
+const salesChartConfig = {
+  sales: {
+    label: 'Satış',
+    color: 'hsl(var(--chart-1))',
+  },
+} satisfies ChartConfig;
+
+const ordersChartConfig = {
+  orders: {
+    label: 'Sipariş',
+    color: 'hsl(var(--chart-2))',
+  },
+} satisfies ChartConfig;
+
+function SetupAlert() {
+  const router = useRouter();
+  const params = useParams();
+  const companySlug = params.companySlug as string;
+
+  return (
+    <div className="flex items-center justify-between px-4 py-2 bg-green-600 text-white">
+      <div className="flex items-center gap-2">
+        <Store className="h-4 w-4" />
+        <span className="text-sm font-medium">
+          Başlamak için mağazanızı bağlayın
+        </span>
+      </div>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => router.push(`/${companySlug}/stores`)}
+      >
+        Mağaza Bağla
+      </Button>
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  // TODO: Check if user has completed setup from API
+  const [hasCompletedSetup] = useState(false);
+
+  return (
+    <>
+      {/* Setup Alert - show if no store connected */}
+      {!hasCompletedSetup && <SetupAlert />}
+
+      {/* Stats Grid - Empty State */}
+      <div className="grid grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, index) => (
+          <div
+            key={stat.name}
+            className={`p-4 ${index < stats.length - 1 ? 'border-r' : ''}`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                {stat.name}
+              </span>
+              <stat.icon className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-muted-foreground">{stat.value}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Charts - Single Column with Alternating Backgrounds */}
+      {/* Sales Chart - White */}
+      <div className="border-t">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Satış Trendi</h3>
+        </div>
+        <div className="p-4">
+        <ChartContainer config={salesChartConfig} className="h-48 w-full">
+          <AreaChart data={salesChartData} margin={{ left: 0, right: 0 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Area
+              dataKey="sales"
+              type="natural"
+              fill="var(--color-sales)"
+              fillOpacity={0.2}
+              stroke="var(--color-sales)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+        </div>
+      </div>
+
+      {/* Orders Chart - Gray */}
+      <div className="border-t">
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/50">
+          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Sipariş Trendi</h3>
+        </div>
+        <div className="p-4 bg-muted/50">
+        <ChartContainer config={ordersChartConfig} className="h-48 w-full">
+          <AreaChart data={ordersChartData} margin={{ left: 0, right: 0 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Area
+              dataKey="orders"
+              type="natural"
+              fill="var(--color-orders)"
+              fillOpacity={0.2}
+              stroke="var(--color-orders)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+        </div>
+      </div>
+
+      {/* Revenue Chart - White */}
+      <div className="border-t">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Gelir</h3>
+        </div>
+        <div className="p-4">
+        <ChartContainer config={salesChartConfig} className="h-48 w-full">
+          <AreaChart data={salesChartData} margin={{ left: 0, right: 0 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Area
+              dataKey="sales"
+              type="natural"
+              fill="var(--color-sales)"
+              fillOpacity={0.2}
+              stroke="var(--color-sales)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+        </div>
+      </div>
+
+      {/* Stock Chart - Gray */}
+      <div className="border-t">
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/50">
+          <Package className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Stok Durumu</h3>
+        </div>
+        <div className="p-4 bg-muted/50">
+        <ChartContainer config={ordersChartConfig} className="h-48 w-full">
+          <AreaChart data={ordersChartData} margin={{ left: 0, right: 0 }}>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              fontSize={12}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />}
+            />
+            <Area
+              dataKey="orders"
+              type="natural"
+              fill="var(--color-orders)"
+              fillOpacity={0.2}
+              stroke="var(--color-orders)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+        </div>
+      </div>
+    </>
+  );
+}

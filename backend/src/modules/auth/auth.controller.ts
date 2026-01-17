@@ -24,6 +24,15 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @Post('check-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'E-posta durumunu kontrol et' })
+  @ApiResponse({ status: 200, description: 'E-posta durumu' })
+  async checkEmail(@Body() dto: { email: string }) {
+    return this.authService.checkEmail(dto.email);
+  }
+
+  @Public()
   @Post('register')
   @ApiOperation({ summary: 'Yeni kullanıcı kaydı' })
   @ApiResponse({ status: 201, description: 'Kullanıcı başarıyla oluşturuldu' })
@@ -62,6 +71,25 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Geçersiz refresh token' })
   async refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshTokens(dto);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'E-posta doğrulama' })
+  @ApiResponse({ status: 200, description: 'E-posta doğrulandı' })
+  @ApiResponse({ status: 400, description: 'Geçersiz veya süresi dolmuş kod' })
+  async verifyEmail(@Body() dto: { email: string; code: string }) {
+    return this.authService.verifyEmail(dto.email, dto.code);
+  }
+
+  @Public()
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Doğrulama kodunu yeniden gönder' })
+  @ApiResponse({ status: 200, description: 'Doğrulama kodu gönderildi' })
+  async resendVerification(@Body() dto: { email: string }) {
+    return this.authService.resendVerificationCode(dto.email);
   }
 
   @Public()

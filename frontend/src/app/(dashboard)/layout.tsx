@@ -1,18 +1,77 @@
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Header } from '@/components/layout/Header';
+'use client';
+
+import { usePathname } from 'next/navigation';
+import { AppSidebar } from '@/components/layout/app-sidebar';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { useCompanyStore } from '@/stores/companyStore';
+
+// Page title mappings
+const pageTitles: Record<string, string> = {
+  '': 'Dashboard',
+  'stores': 'Mağazalar',
+  'inventory': 'Stok Yönetimi',
+  'orders': 'Siparişler',
+  'payments': 'Ödemeler',
+  'reports': 'Raporlar',
+  'refunds': 'İadeler',
+  'settings': 'Ayarlar',
+};
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const { currentCompany } = useCompanyStore();
+
+  // Parse current path to build breadcrumbs
+  // Path format: /[companySlug]/[module]/[subpage]
+  const pathParts = pathname.split('/').filter(Boolean);
+  const companySlug = pathParts[0];
+  const currentModule = pathParts[1] || '';
+  const currentPage = pageTitles[currentModule] || currentModule || 'Dashboard';
+
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-muted/30 p-6">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b">
+          <div className="flex items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="mr-2 h-4" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href={`/${companySlug}`}>
+                    {currentCompany?.name || 'Ana Sayfa'}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{currentPage}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

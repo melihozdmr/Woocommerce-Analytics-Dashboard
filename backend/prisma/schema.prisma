@@ -29,29 +29,82 @@ enum StoreStatus {
   ERROR
 }
 
+enum CompanyRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
 // ==================== MODELS ====================
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  password         String
-  name             String?
-  role             UserRole  @default(USER)
-  planId           String?   @map("plan_id")
-  grandfathered    Boolean   @default(false)
-  isActive         Boolean   @default(true) @map("is_active")
-  lastLoginAt      DateTime? @map("last_login_at")
-  resetToken       String?   @map("reset_token")
-  resetTokenExpiry DateTime? @map("reset_token_expiry")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                       String    @id @default(cuid())
+  email                    String    @unique
+  password                 String
+  name                     String?
+  role                     UserRole  @default(USER)
+  planId                   String?   @map("plan_id")
+  currentCompanyId         String?   @map("current_company_id")
+  grandfathered            Boolean   @default(false)
+  isActive                 Boolean   @default(true) @map("is_active")
+  isEmailVerified          Boolean   @default(false) @map("is_email_verified")
+  emailVerificationCode    String?   @map("email_verification_code")
+  emailVerificationExpiry  DateTime? @map("email_verification_expiry")
+  lastLoginAt              DateTime? @map("last_login_at")
+  resetToken               String?   @map("reset_token")
+  resetTokenExpiry         DateTime? @map("reset_token_expiry")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  plan          Plan?          @relation(fields: [planId], references: [id])
-  stores        Store[]
-  refreshTokens RefreshToken[]
+  plan             Plan?            @relation(fields: [planId], references: [id])
+  currentCompany   Company?         @relation("CurrentCompany", fields: [currentCompanyId], references: [id])
+  companyMembers   CompanyMember[]
+  refreshTokens    RefreshToken[]
 
   @@map("users")
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logo        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members     CompanyMember[]
+  stores      Store[]
+  currentUsers User[] @relation("CurrentCompany")
+
+  @@map("companies")
+}
+
+model CompanyMember {
+  id          String      @id @default(cuid())
+  companyId   String      @map("company_id")
+  userId      String?     @map("user_id")
+  email       String      // Davet edilen e-posta
+  role        CompanyRole @default(MEMBER)
+  inviteToken String?     @unique @map("invite_token")
+  inviteStatus InviteStatus @default(PENDING) @map("invite_status")
+  invitedAt   DateTime    @default(now()) @map("invited_at")
+  joinedAt    DateTime?   @map("joined_at")
+
+  // Relations
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, email])
+  @@index([inviteToken])
+  @@map("company_members")
 }
 
 model Plan {
@@ -75,7 +128,7 @@ model Plan {
 
 model Store {
   id             String      @id @default(cuid())
-  userId         String      @map("user_id")
+  companyId      String      @map("company_id")
   name           String
   url            String
   consumerKey    String      @map("consumer_key") // Encrypted
@@ -84,13 +137,18 @@ model Store {
   shippingCost   Decimal     @default(0) @map("shipping_cost") @db.Decimal(10, 2) // TL
   currency       String      @default("TRY")
   status         StoreStatus @default(ACTIVE)
+  isSyncing      Boolean     @default(false) @map("is_syncing")
+  syncStep       String?     @map("sync_step") // connection, products, variations, orders, saving
+  syncProductsCount   Int?   @map("sync_products_count")
+  syncVariationsCount Int?   @map("sync_variations_count")
+  syncOrdersCount     Int?   @map("sync_orders_count")
   lastSyncAt     DateTime?   @map("last_sync_at")
   syncError      String?     @map("sync_error")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   analyticsCache AnalyticsCache[]
   products       Product[]
   orders         Order[]
@@ -104,20 +162,46 @@ model Product {
   wcProductId   Int      @map("wc_product_id") // WooCommerce product ID
   name          String
   sku           String?
+  productType   String   @default("simple") @map("product_type") // simple, variable, grouped, external
   price         Decimal  @default(0) @db.Decimal(10, 2) // Satış fiyatı
   purchasePrice Decimal? @map("purchase_price") @db.Decimal(10, 2) // Alış fiyatı
   stockQuantity Int      @default(0) @map("stock_quantity")
   stockStatus   String   @default("instock") @map("stock_status")
+  manageStock   Boolean  @default(false) @map("manage_stock")
   isActive      Boolean  @default(true) @map("is_active")
   syncedAt      DateTime @default(now()) @map("synced_at")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store      Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variations ProductVariation[]
 
   @@unique([storeId, wcProductId])
   @@map("products")
+}
+
+model ProductVariation {
+  id              String   @id @default(cuid())
+  productId       String   @map("product_id")
+  wcVariationId   Int      @map("wc_variation_id") // WooCommerce variation ID
+  sku             String?
+  price           Decimal  @default(0) @db.Decimal(10, 2)
+  stockQuantity   Int      @default(0) @map("stock_quantity")
+  stockStatus     String   @default("instock") @map("stock_status")
+  manageStock     Boolean  @default(false) @map("manage_stock")
+  attributes      Json?    // { "Beden": "XL", "Renk": "Kırmızı" }
+  attributeString String?  @map("attribute_string") // "XL / Kırmızı" - for display
+  isActive        Boolean  @default(true) @map("is_active")
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, wcVariationId])
+  @@map("product_variations")
 }
 
 model Order {

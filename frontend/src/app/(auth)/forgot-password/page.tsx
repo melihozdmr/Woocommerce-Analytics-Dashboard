@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,18 +14,17 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
 
     try {
       await api.post('/auth/forgot-password', { email });
       setIsSuccess(true);
+      toast.success('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Bir hata oluştu');
+      toast.error(err.response?.data?.message || 'Bir hata oluştu');
     } finally {
       setIsLoading(false);
     }
@@ -71,12 +71,6 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="email">E-posta</Label>
               <Input

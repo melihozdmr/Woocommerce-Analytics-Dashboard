@@ -15,6 +15,7 @@ interface User {
   name?: string;
   role: string;
   plan?: Plan;
+  currentCompanyId?: string;
 }
 
 interface AuthState {
@@ -28,8 +29,8 @@ interface AuthState {
   setTokens: (accessToken: string, refreshToken: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  register: (email: string, name: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ requiresVerification: boolean; email?: string }>;
+  register: (email: string, name: string, password: string) => Promise<{ requiresVerification: boolean; email?: string }>;
   logout: () => Promise<void>;
   refreshTokens: () => Promise<boolean>;
   checkAuth: () => Promise<void>;
@@ -67,6 +68,13 @@ export const useAuthStore = create<AuthState>()(
             password,
             rememberMe,
           });
+
+          // Check if verification is required
+          if (response.data.requiresVerification) {
+            set({ isLoading: false, error: null });
+            return { requiresVerification: true, email: response.data.email };
+          }
+
           const { user, accessToken, refreshToken } = response.data;
           set({
             user,
@@ -76,6 +84,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: null,
           });
+          return { requiresVerification: false };
         } catch (error: any) {
           const message = error.response?.data?.message || 'Giriş başarısız';
           set({ isLoading: false, error: message });
@@ -91,6 +100,13 @@ export const useAuthStore = create<AuthState>()(
             name,
             password,
           });
+
+          // Check if verification is required
+          if (response.data.requiresVerification) {
+            set({ isLoading: false, error: null });
+            return { requiresVerification: true, email: response.data.email };
+          }
+
           const { user, accessToken, refreshToken } = response.data;
           set({
             user,
@@ -100,6 +116,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
             error: null,
           });
+          return { requiresVerification: false };
         } catch (error: any) {
           const message = error.response?.data?.message || 'Kayıt başarısız';
           set({ isLoading: false, error: message });
