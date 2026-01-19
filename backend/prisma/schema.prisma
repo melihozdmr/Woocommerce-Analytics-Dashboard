@@ -230,13 +230,34 @@ model Order {
   createdAt       DateTime @default(now()) @map("created_at")
 
   // Relations
-  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  items OrderItem[]
+  store   Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items   OrderItem[]
+  refunds Refund[]
 
   @@unique([storeId, wcOrderId])
   @@index([storeId, orderDate])
   @@index([storeId, status])
   @@map("orders")
+}
+
+model Refund {
+  id           String   @id @default(cuid())
+  orderId      String   @map("order_id")
+  wcRefundId   Int      @map("wc_refund_id") // WooCommerce refund ID
+  amount       Decimal  @db.Decimal(10, 2) // Refund amount (positive value)
+  reason       String?  // Refund reason
+  refundedBy   String?  @map("refunded_by") // Who processed the refund
+  refundDate   DateTime @map("refund_date")
+  syncedAt     DateTime @default(now()) @map("synced_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, wcRefundId])
+  @@index([orderId])
+  @@index([refundDate])
+  @@map("refunds")
 }
 
 model OrderItem {

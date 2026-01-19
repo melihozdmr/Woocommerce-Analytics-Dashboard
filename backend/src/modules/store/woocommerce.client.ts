@@ -45,6 +45,14 @@ export interface WooCommerceVariation {
   }>;
 }
 
+export interface WooCommerceRefund {
+  id: number;
+  reason: string;
+  total: string; // Negative value like "-150.00"
+  date_created: string;
+  refunded_by?: number;
+}
+
 export interface WooCommerceOrder {
   id: number;
   number: string;
@@ -74,6 +82,7 @@ export interface WooCommerceOrder {
     sku: string;
     price: number;
   }>;
+  refunds?: WooCommerceRefund[];
   date_created: string;
 }
 

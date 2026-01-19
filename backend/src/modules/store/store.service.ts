@@ -703,6 +703,32 @@ export class StoreService implements OnModuleInit {
             },
           });
         }
+
+        // Refund'ları kaydet (varsa)
+        if (order.refunds && order.refunds.length > 0) {
+          for (const refund of order.refunds) {
+            await this.prisma.refund.upsert({
+              where: {
+                orderId_wcRefundId: {
+                  orderId: savedOrder.id,
+                  wcRefundId: refund.id,
+                },
+              },
+              update: {
+                amount: Math.abs(parseFloat(refund.total)) || 0,
+                reason: refund.reason || null,
+                syncedAt: new Date(),
+              },
+              create: {
+                orderId: savedOrder.id,
+                wcRefundId: refund.id,
+                amount: Math.abs(parseFloat(refund.total)) || 0,
+                reason: refund.reason || null,
+                refundDate: new Date(refund.date_created),
+              },
+            });
+          }
+        }
       }
 
       // Verileri kaydediyor

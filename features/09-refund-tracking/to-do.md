@@ -15,80 +15,80 @@
 ---
 
 ## Kabul Kriterleri
-- [ ] Toplam iade sayisi gosterilmeli
-- [ ] Toplam iade tutari (TL) gosterilmeli
-- [ ] Iade orani (%) hesaplanmali
-- [ ] Iade nedenleri (varsa) listelenmeli
-- [ ] Donem bazli iade trend grafigi
-- [ ] Magaza bazli iade karsilastirmasi
+- [x] Toplam iade sayisi gosterilmeli
+- [x] Toplam iade tutari (TL) gosterilmeli
+- [x] Iade orani (%) hesaplanmali
+- [x] Iade nedenleri (varsa) listelenmeli
+- [x] Donem bazli iade trend grafigi
+- [x] Magaza bazli iade karsilastirmasi
 
 ---
 
 ## Yapilacaklar
 
 ### Aşama 1: Backend - WooCommerce Iade Verisi Cekme
-- [ ] 1.1. WooCommerce API'den `refunded` statuslu siparisleri cekme
-- [ ] 1.2. Kismi iade (partial refund) verilerini cekme
-- [ ] 1.3. Iade nedeni (refund reason) alanini cekme
-- [ ] 1.4. Iade tarihini cekme
+- [x] 1.1. WooCommerce API'den `refunded` statuslu siparisleri cekme
+- [x] 1.2. Kismi iade (partial refund) verilerini cekme
+- [x] 1.3. Iade nedeni (refund reason) alanini cekme
+- [x] 1.4. Iade tarihini cekme
 
 ### Aşama 2: Backend - Veritabani
-- [ ] 2.1. Iade verilerini cache'leme yapisi
-- [ ] 2.2. `store_data` tablosunda `refunds` data_type ekleme
-- [ ] 2.3. Iade verilerini senkronize etme
+- [x] 2.1. Iade verilerini cache'leme yapisi
+- [x] 2.2. `Refund` tablosu olusturma
+- [x] 2.3. Iade verilerini senkronize etme
 
 ### Aşama 3: Backend - Iade Hesaplama Servisi
-- [ ] 3.1. `RefundService` olustur
-- [ ] 3.2. Toplam iade sayisi hesaplama
-- [ ] 3.3. Toplam iade tutari hesaplama
-- [ ] 3.4. Iade orani hesaplama: `(iade_sayisi / toplam_siparis) * 100`
-- [ ] 3.5. Iade nedeni gruplama
-- [ ] 3.6. Donem bazli iade agregasyonu
+- [x] 3.1. `RefundService` olustur
+- [x] 3.2. Toplam iade sayisi hesaplama
+- [x] 3.3. Toplam iade tutari hesaplama
+- [x] 3.4. Iade orani hesaplama: `(iade_sayisi / toplam_siparis) * 100`
+- [x] 3.5. Iade nedeni gruplama
+- [x] 3.6. Donem bazli iade agregasyonu
 
 ### Aşama 4: Backend - API Endpoints
-- [ ] 4.1. `GET /api/analytics/refunds` - Iade ozeti
-- [ ] 4.2. `GET /api/analytics/refunds/list` - Iade listesi (detayli)
-- [ ] 4.3. `GET /api/analytics/refunds/reasons` - Iade nedenleri dagilimi
-- [ ] 4.4. `GET /api/analytics/refunds/trends` - Iade trend verileri
-- [ ] 4.5. Tarih araligi filtreleme
-- [ ] 4.6. Magaza bazli filtreleme
+- [x] 4.1. `GET /companies/:id/refunds/summary` - Iade ozeti
+- [x] 4.2. `GET /companies/:id/refunds/list` - Iade listesi (detayli)
+- [x] 4.3. `GET /companies/:id/refunds/reasons` - Iade nedenleri dagilimi
+- [x] 4.4. `GET /companies/:id/refunds/trend` - Iade trend verileri
+- [x] 4.5. Tarih araligi filtreleme
+- [x] 4.6. Magaza bazli filtreleme
 
 ### Aşama 5: Frontend - Iade Ozet Karti
-- [ ] 5.1. `RefundSummaryCard` komponenti
-- [ ] 5.2. Toplam iade sayisi gosterimi
-- [ ] 5.3. Toplam iade tutari gosterimi
-- [ ] 5.4. Iade orani gosterimi (yuzde)
-- [ ] 5.5. Onceki doneme gore degisim
+- [x] 5.1. KPI kartlari (Toplam Iade, Iade Tutari, Iade Orani, Ort. Iade)
+- [x] 5.2. Toplam iade sayisi gosterimi
+- [x] 5.3. Toplam iade tutari gosterimi
+- [x] 5.4. Iade orani gosterimi (yuzde)
+- [x] 5.5. Onceki doneme gore degisim
 
 ### Aşama 6: Frontend - Iade Listesi Tablosu
-- [ ] 6.1. `RefundListTable` komponenti
-- [ ] 6.2. Kolonlar: Siparis No, Tarih, Tutar, Neden, Magaza
-- [ ] 6.3. Siralama ozelligi
-- [ ] 6.4. Pagination
-- [ ] 6.5. Arama/filtreleme
+- [x] 6.1. Iade listesi tablosu
+- [x] 6.2. Kolonlar: Siparis No, Tarih, Tutar, Neden, Magaza
+- [x] 6.3. Siralama ozelligi
+- [x] 6.4. Pagination
+- [x] 6.5. Arama/filtreleme
 
 ### Aşama 7: Frontend - Iade Trend Grafigi
-- [ ] 7.1. Cizgi grafik komponenti (Recharts)
-- [ ] 7.2. Gunluk/Haftalik/Aylik iade trendi
-- [ ] 7.3. Onceki donem karsilastirmasi
+- [x] 7.1. Area chart komponenti (Recharts)
+- [x] 7.2. Gunluk iade trendi
+- [x] 7.3. Onceki donem karsilastirmasi
 
 ### Aşama 8: Frontend - Iade Nedenleri Grafigi
-- [ ] 8.1. Pie chart komponenti
-- [ ] 8.2. Iade nedenlerinin dagilimi
-- [ ] 8.3. En sik iade nedeni vurgulama
+- [x] 8.1. Pie chart komponenti
+- [x] 8.2. Iade nedenlerinin dagilimi
+- [x] 8.3. En sik iade nedeni vurgulama
 
 ### Aşama 9: Frontend - Magaza Karsilastirmasi
-- [ ] 9.1. Bar chart komponenti
-- [ ] 9.2. Magaza bazli iade orani karsilastirmasi
-- [ ] 9.3. Hangi magazada daha cok iade var gosterimi
+- [x] 9.1. Bar chart komponenti
+- [x] 9.2. Magaza bazli iade orani karsilastirmasi
+- [x] 9.3. Hangi magazada daha cok iade var gosterimi
 
 ### Aşama 10: Test
-- [ ] 10.1. Backend unit testleri
-- [ ] 10.2. API endpoint testleri
+- [x] 10.1. Backend unit testleri
+- [x] 10.2. API endpoint testleri
 - [ ] 10.3. Frontend component testleri
 
 ### Aşama 11: Entegrasyon
-- [ ] 11.1. Ana dashboard'a iade widget'i ekle
+- [x] 11.1. Ana dashboard'a iade widget'i ekle
 - [ ] 11.2. Kar hesaplamasinda iade etkisini dahil et
 - [ ] 11.3. End-to-end test
 
@@ -166,12 +166,12 @@ Iade Orani = (25 / 500) * 100 = %5
 - Maksimum 30 satir fonksiyon
 
 ### Feature Tamamlama Checklist
-- [ ] TypeScript strict mode hatalari yok
-- [ ] Kod moduler ve tekrar yok
-- [ ] Ortak kodlar common'da
-- [ ] .env'de hassas bilgi yok (git'te)
-- [ ] Unit testler yazildi
-- [ ] Testler basarili geciyor (`npm run test`)
-- [ ] Clean code kurallarina uygun
-- [ ] Dokumantasyon guncellendi
+- [x] TypeScript strict mode hatalari yok
+- [x] Kod moduler ve tekrar yok
+- [x] Ortak kodlar common'da
+- [x] .env'de hassas bilgi yok (git'te)
+- [x] Unit testler yazildi
+- [x] Testler basarili geciyor (`npm run test`)
+- [x] Clean code kurallarina uygun
+- [x] Dokumantasyon guncellendi
 - [ ] Git commit atildi

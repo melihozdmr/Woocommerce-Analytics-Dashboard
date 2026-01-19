@@ -11,6 +11,7 @@ import {
   BarChart3,
   Store,
   DollarSign,
+  RotateCcw,
 } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ import { useCompanyStore } from '@/stores/companyStore';
 import { useStoreStore } from '@/stores/storeStore';
 import { useInventoryStore } from '@/stores/inventoryStore';
 import { useProfitStore } from '@/stores/profitStore';
+import { useRefundStore } from '@/stores/refundStore';
 import { cn } from '@/lib/utils';
 
 // Sample chart data
@@ -107,15 +109,21 @@ export default function DashboardPage() {
     isSummaryLoading: isProfitLoading,
     fetchSummary: fetchProfitSummary,
   } = useProfitStore();
+  const {
+    summary: refundSummary,
+    isSummaryLoading: isRefundLoading,
+    fetchSummary: fetchRefundSummary,
+  } = useRefundStore();
 
-  // Fetch stores, inventory and profit on mount
+  // Fetch stores, inventory, profit and refund on mount
   useEffect(() => {
     if (currentCompany?.id) {
       fetchStores(currentCompany.id);
       fetchSummary(currentCompany.id);
       fetchProfitSummary(currentCompany.id);
+      fetchRefundSummary(currentCompany.id);
     }
-  }, [currentCompany?.id, fetchStores, fetchSummary, fetchProfitSummary]);
+  }, [currentCompany?.id, fetchStores, fetchSummary, fetchProfitSummary, fetchRefundSummary]);
 
   const hasStores = stores.length > 0;
 
@@ -139,10 +147,15 @@ export default function DashboardPage() {
       negative: profitSummary && profitSummary.profitMargin < 0,
     },
     {
-      name: 'Toplam Stok',
-      value: summary ? formatNumber(summary.totalStock) : '-',
-      icon: Package,
-      loading: isLoading,
+      name: 'İade Oranı',
+      value: refundSummary ? `%${refundSummary.refundRate}` : '-',
+      icon: RotateCcw,
+      loading: isRefundLoading,
+      positive: refundSummary && refundSummary.refundRate < 5,
+      alert: refundSummary && refundSummary.refundRate >= 5 && refundSummary.refundRate < 10,
+      negative: refundSummary && refundSummary.refundRate >= 10,
+      change: refundSummary?.refundCountChange,
+      invertChange: true, // İade için artış kötü
     },
     {
       name: 'Kritik Stok',
@@ -193,7 +206,7 @@ export default function DashboardPage() {
                   {stat.change !== undefined && stat.change !== 0 && (
                     <span className={cn(
                       'flex items-center text-xs font-medium',
-                      stat.change > 0 ? 'text-green-600' : 'text-red-600'
+                      (stat.invertChange ? stat.change < 0 : stat.change > 0) ? 'text-green-600' : 'text-red-600'
                     )}>
                       {stat.change > 0 ? (
                         <TrendingUp className="h-3 w-3 mr-0.5" />
