@@ -131,8 +131,11 @@ model Store {
   companyId      String      @map("company_id")
   name           String
   url            String
-  consumerKey    String      @map("consumer_key") // Encrypted
-  consumerSecret String      @map("consumer_secret") // Encrypted
+  consumerKey    String      @map("consumer_key") // Encrypted - WooCommerce API
+  consumerSecret String      @map("consumer_secret") // Encrypted - WooCommerce API
+  wcscApiKey     String?     @map("wcsc_api_key") // WC Stock Connector API Key
+  wcscApiSecret  String?     @map("wcsc_api_secret") // WC Stock Connector API Secret
+  hasWcscPlugin  Boolean     @default(false) @map("has_wcsc_plugin") // WC Stock Connector eklentisi kurulu mu?
   commissionRate Decimal     @default(0) @map("commission_rate") @db.Decimal(5, 2) // 0-100%
   shippingCost   Decimal     @default(0) @map("shipping_cost") @db.Decimal(10, 2) // TL
   currency       String      @default("TRY")
@@ -188,6 +191,7 @@ model ProductVariation {
   wcVariationId   Int      @map("wc_variation_id") // WooCommerce variation ID
   sku             String?
   price           Decimal  @default(0) @db.Decimal(10, 2)
+  purchasePrice   Decimal? @map("purchase_price") @db.Decimal(10, 2) // Alış fiyatı
   stockQuantity   Int      @default(0) @map("stock_quantity")
   stockStatus     String   @default("instock") @map("stock_status")
   manageStock     Boolean  @default(false) @map("manage_stock")

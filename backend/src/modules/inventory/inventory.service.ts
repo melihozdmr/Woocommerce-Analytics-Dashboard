@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { WooCommerceClient } from '../store/woocommerce.client';
+import { WCSCClient } from '../store/wcsc.client';
 
 export interface InventorySummary {
   totalStock: number;
@@ -650,6 +651,258 @@ export class InventoryService {
       id: updatedVariation.id,
       stockQuantity: updatedVariation.stockQuantity,
       stockStatus: updatedVariation.stockStatus,
+    };
+  }
+
+  async updateProductPurchasePrice(companyId: string, productId: string, purchasePrice: number) {
+    // Verify the product belongs to a store in this company
+    const product = await this.prisma.product.findFirst({
+      where: {
+        id: productId,
+        store: {
+          companyId,
+          status: 'ACTIVE',
+        },
+      },
+      include: {
+        store: true,
+      },
+    });
+
+    if (!product) {
+      throw new BadRequestException('Ürün bulunamadı');
+    }
+
+    // If store has WCSC plugin, sync to WooCommerce
+    if (product.store.hasWcscPlugin && product.store.wcscApiKey && product.store.wcscApiSecret) {
+      try {
+        const wcscClient = new WCSCClient({
+          url: product.store.url,
+          apiKey: product.store.wcscApiKey,
+          apiSecret: product.store.wcscApiSecret,
+        });
+        await wcscClient.updatePurchasePrice(product.wcProductId, purchasePrice);
+      } catch (error: any) {
+        console.error('WCSC sync failed:', error.message);
+        // Continue with local update even if sync fails
+      }
+    }
+
+    // Update local database
+    const updatedProduct = await this.prisma.product.update({
+      where: { id: productId },
+      data: { purchasePrice },
+    });
+
+    return {
+      id: updatedProduct.id,
+      purchasePrice: Number(updatedProduct.purchasePrice),
+    };
+  }
+
+  async updateVariationPurchasePrice(companyId: string, variationId: string, purchasePrice: number) {
+    // Verify the variation belongs to a product in this company
+    const variation = await this.prisma.productVariation.findFirst({
+      where: {
+        id: variationId,
+        product: {
+          store: {
+            companyId,
+            status: 'ACTIVE',
+          },
+        },
+      },
+      include: {
+        product: {
+          include: { store: true },
+        },
+      },
+    });
+
+    if (!variation) {
+      throw new BadRequestException('Varyasyon bulunamadı');
+    }
+
+    // Update local database
+    const updatedVariation = await this.prisma.productVariation.update({
+      where: { id: variationId },
+      data: { purchasePrice },
+    });
+
+    return {
+      id: updatedVariation.id,
+      purchasePrice: Number(updatedVariation.purchasePrice),
+    };
+  }
+
+  async bulkUpdate(
+    companyId: string,
+    items: Array<{
+      productId: string;
+      variationId?: string;
+      stockQuantity?: number;
+      purchasePrice?: number;
+    }>,
+    syncToStore = true,
+  ) {
+    const results = {
+      success: [] as Array<{ id: string; type: string }>,
+      failed: [] as Array<{ id: string; type: string; error: string }>,
+    };
+
+    // Group items by store for batch processing
+    const storeItems = new Map<string, typeof items>();
+
+    for (const item of items) {
+      let storeId: string | null = null;
+
+      if (item.variationId) {
+        const variation = await this.prisma.productVariation.findFirst({
+          where: {
+            id: item.variationId,
+            product: { store: { companyId } },
+          },
+          select: { product: { select: { storeId: true } } },
+        });
+        storeId = variation?.product.storeId || null;
+      } else if (item.productId) {
+        const product = await this.prisma.product.findFirst({
+          where: {
+            id: item.productId,
+            store: { companyId },
+          },
+          select: { storeId: true },
+        });
+        storeId = product?.storeId || null;
+      }
+
+      if (storeId) {
+        if (!storeItems.has(storeId)) {
+          storeItems.set(storeId, []);
+        }
+        storeItems.get(storeId)!.push(item);
+      }
+    }
+
+    // Process each store's items
+    for (const [storeId, storeItemList] of storeItems) {
+      const store = await this.prisma.store.findUnique({
+        where: { id: storeId },
+      });
+
+      if (!store) continue;
+
+      // Process each item
+      for (const item of storeItemList) {
+        try {
+          if (item.variationId) {
+            // Update variation
+            if (item.stockQuantity !== undefined) {
+              await this.updateVariationStock(companyId, item.variationId, item.stockQuantity);
+            }
+            if (item.purchasePrice !== undefined) {
+              await this.updateVariationPurchasePrice(companyId, item.variationId, item.purchasePrice);
+            }
+            results.success.push({ id: item.variationId, type: 'variation' });
+          } else if (item.productId) {
+            // Update product
+            if (item.stockQuantity !== undefined) {
+              await this.updateProductStock(companyId, item.productId, item.stockQuantity);
+            }
+            if (item.purchasePrice !== undefined) {
+              await this.updateProductPurchasePrice(companyId, item.productId, item.purchasePrice);
+            }
+            results.success.push({ id: item.productId, type: 'product' });
+          }
+        } catch (error: any) {
+          results.failed.push({
+            id: item.variationId || item.productId,
+            type: item.variationId ? 'variation' : 'product',
+            error: error.message || 'Bilinmeyen hata',
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `${results.success.length} öğe güncellendi, ${results.failed.length} başarısız`,
+      results,
+    };
+  }
+
+  async syncPurchasePricesFromStore(companyId: string, storeId: string) {
+    // Verify the store belongs to this company
+    const store = await this.prisma.store.findFirst({
+      where: {
+        id: storeId,
+        companyId,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (!store) {
+      throw new BadRequestException('Mağaza bulunamadı');
+    }
+
+    if (!store.hasWcscPlugin || !store.wcscApiKey || !store.wcscApiSecret) {
+      throw new BadRequestException('Bu mağazada WC Stock Connector eklentisi kurulu değil');
+    }
+
+    const wcscClient = new WCSCClient({
+      url: store.url,
+      apiKey: store.wcscApiKey,
+      apiSecret: store.wcscApiSecret,
+    });
+
+    // Get all products from WCSC
+    const wcscProducts = await wcscClient.getAllProducts();
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const wcProd of wcscProducts) {
+      if (wcProd.purchase_price > 0) {
+        // Find the product in our database
+        const product = await this.prisma.product.findFirst({
+          where: {
+            storeId,
+            wcProductId: wcProd.id,
+          },
+        });
+
+        if (product) {
+          await this.prisma.product.update({
+            where: { id: product.id },
+            data: { purchasePrice: wcProd.purchase_price },
+          });
+          updatedCount++;
+
+          // Also update variations if they have purchase prices
+          if (wcProd.variations) {
+            for (const wcVar of wcProd.variations) {
+              if (wcVar.purchase_price > 0) {
+                await this.prisma.productVariation.updateMany({
+                  where: {
+                    productId: product.id,
+                    wcVariationId: wcVar.id,
+                  },
+                  data: { purchasePrice: wcVar.purchase_price },
+                });
+              }
+            }
+          }
+        } else {
+          skippedCount++;
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `${updatedCount} ürünün alış fiyatı güncellendi`,
+      updatedCount,
+      skippedCount,
     };
   }
 }

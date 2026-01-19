@@ -12,6 +12,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateStoreDto, UpdateStoreDto } from './dto';
 import { encrypt, decrypt } from '../../common/utils/crypto.util';
 import { WooCommerceClient } from './woocommerce.client';
+import { WCSCClient } from './wcsc.client';
 import { StoreStatus, CompanyRole, InviteStatus } from '@prisma/client';
 
 @Injectable()
@@ -730,5 +731,109 @@ export class StoreService implements OnModuleInit {
 
       this.logger.error(`Sync failed for ${store.name}: ${errorMessage}`);
     }
+  }
+
+  /**
+   * WC Stock Connector eklentisini bağla
+   */
+  async connectWcscPlugin(
+    companyId: string,
+    storeId: string,
+    userId: string,
+    apiKey: string,
+    apiSecret: string,
+  ) {
+    await this.checkCompanyAccess(companyId, userId);
+
+    const store = await this.prisma.store.findFirst({
+      where: { id: storeId, companyId },
+    });
+
+    if (!store) {
+      throw new NotFoundException('Mağaza bulunamadı');
+    }
+
+    // WCSC bağlantısını doğrula
+    const wcscClient = new WCSCClient({
+      url: store.url,
+      apiKey,
+      apiSecret,
+    });
+
+    const verifyResult = await wcscClient.verify();
+
+    if (!verifyResult.success) {
+      throw new BadRequestException(verifyResult.error || 'WC Stock Connector bağlantısı kurulamadı');
+    }
+
+    // Credentials'ı şifrele ve kaydet
+    const encryptedKey = encrypt(apiKey, this.encryptionKey);
+    const encryptedSecret = encrypt(apiSecret, this.encryptionKey);
+
+    await this.prisma.store.update({
+      where: { id: storeId },
+      data: {
+        wcscApiKey: encryptedKey,
+        wcscApiSecret: encryptedSecret,
+        hasWcscPlugin: true,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'WC Stock Connector eklentisi bağlandı',
+      data: verifyResult.data,
+    };
+  }
+
+  /**
+   * WC Stock Connector eklentisi bağlantısını kes
+   */
+  async disconnectWcscPlugin(companyId: string, storeId: string, userId: string) {
+    await this.checkCompanyAccess(companyId, userId);
+
+    const store = await this.prisma.store.findFirst({
+      where: { id: storeId, companyId },
+    });
+
+    if (!store) {
+      throw new NotFoundException('Mağaza bulunamadı');
+    }
+
+    await this.prisma.store.update({
+      where: { id: storeId },
+      data: {
+        wcscApiKey: null,
+        wcscApiSecret: null,
+        hasWcscPlugin: false,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'WC Stock Connector eklentisi bağlantısı kesildi',
+    };
+  }
+
+  /**
+   * Mağazanın WCSC client'ını oluştur
+   */
+  async getWcscClient(storeId: string): Promise<WCSCClient | null> {
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+    });
+
+    if (!store || !store.hasWcscPlugin || !store.wcscApiKey || !store.wcscApiSecret) {
+      return null;
+    }
+
+    const apiKey = decrypt(store.wcscApiKey, this.encryptionKey);
+    const apiSecret = decrypt(store.wcscApiSecret, this.encryptionKey);
+
+    return new WCSCClient({
+      url: store.url,
+      apiKey,
+      apiSecret,
+    });
   }
 }

@@ -117,4 +117,30 @@ export class StoreController {
   ) {
     return this.storeService.syncStore(companyId, storeId, userId);
   }
+
+  @Post(':storeId/connect-wcsc')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'WC Stock Connector eklentisini bağla' })
+  @ApiResponse({ status: 200, description: 'Eklenti bağlandı' })
+  @ApiResponse({ status: 400, description: 'Bağlantı hatası' })
+  async connectWcscPlugin(
+    @Param('companyId') companyId: string,
+    @Param('storeId') storeId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: { apiKey: string; apiSecret: string },
+  ) {
+    return this.storeService.connectWcscPlugin(companyId, storeId, userId, dto.apiKey, dto.apiSecret);
+  }
+
+  @Post(':storeId/disconnect-wcsc')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'WC Stock Connector eklentisi bağlantısını kes' })
+  @ApiResponse({ status: 200, description: 'Bağlantı kesildi' })
+  async disconnectWcscPlugin(
+    @Param('companyId') companyId: string,
+    @Param('storeId') storeId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.storeService.disconnectWcscPlugin(companyId, storeId, userId);
+  }
 }

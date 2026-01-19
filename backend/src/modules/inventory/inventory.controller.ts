@@ -1,6 +1,13 @@
-import { Controller, Get, Patch, Param, Query, Body, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Query, Body, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
+
+interface BulkUpdateItem {
+  productId: string;
+  variationId?: string;
+  stockQuantity?: number;
+  purchasePrice?: number;
+}
 
 @ApiTags('inventory')
 @Controller('company/:companyId/inventory')
@@ -88,5 +95,40 @@ export class InventoryController {
     @Body('stockQuantity') stockQuantity: number,
   ) {
     return this.inventoryService.updateVariationStock(companyId, variationId, stockQuantity);
+  }
+
+  @Patch('products/:productId/purchase-price')
+  async updateProductPurchasePrice(
+    @Param('companyId') companyId: string,
+    @Param('productId') productId: string,
+    @Body('purchasePrice') purchasePrice: number,
+  ) {
+    return this.inventoryService.updateProductPurchasePrice(companyId, productId, purchasePrice);
+  }
+
+  @Patch('variations/:variationId/purchase-price')
+  async updateVariationPurchasePrice(
+    @Param('companyId') companyId: string,
+    @Param('variationId') variationId: string,
+    @Body('purchasePrice') purchasePrice: number,
+  ) {
+    return this.inventoryService.updateVariationPurchasePrice(companyId, variationId, purchasePrice);
+  }
+
+  @Post('bulk-update')
+  async bulkUpdate(
+    @Param('companyId') companyId: string,
+    @Body('items') items: BulkUpdateItem[],
+    @Body('syncToStore') syncToStore?: boolean,
+  ) {
+    return this.inventoryService.bulkUpdate(companyId, items, syncToStore);
+  }
+
+  @Post('sync-purchase-prices')
+  async syncPurchasePricesFromStore(
+    @Param('companyId') companyId: string,
+    @Body('storeId') storeId: string,
+  ) {
+    return this.inventoryService.syncPurchasePricesFromStore(companyId, storeId);
   }
 }

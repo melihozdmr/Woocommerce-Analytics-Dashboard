@@ -43,7 +43,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Dialog,
@@ -351,6 +350,7 @@ export default function OrdersPage() {
                   selected={dateRange}
                   onSelect={handleDateRangeChange}
                   numberOfMonths={2}
+                  disabled={{ after: new Date() }}
                 />
               </PopoverContent>
             </Popover>
@@ -472,16 +472,16 @@ export default function OrdersPage() {
 
       {viewMode === 'charts' ? (
         /* Charts View */
-        <div className="p-6 space-y-6">
+        <div className="flex-1">
           {/* Trend Chart */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base font-medium flex items-center gap-2">
+          <div className="border-b">
+            <div className="px-6 py-4 border-b">
+              <h3 className="text-base font-medium flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Sipariş Trendi
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              </h3>
+            </div>
+            <div className="p-6">
               {isTrendLoading ? (
                 <Skeleton className="h-[300px] w-full" />
               ) : trend.length === 0 ? (
@@ -498,6 +498,8 @@ export default function OrdersPage() {
                       tick={{ fontSize: 12 }}
                       tickLine={false}
                       axisLine={false}
+                      interval="equidistantPreserveStart"
+                      minTickGap={40}
                     />
                     <YAxis
                       yAxisId="left"
@@ -542,20 +544,20 @@ export default function OrdersPage() {
                   </LineChart>
                 </ChartContainer>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Distribution Charts */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2">
             {/* Store Distribution Pie Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
+            <div className="border-r">
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-base font-medium flex items-center gap-2">
                   <PieChartIcon className="h-4 w-4" />
                   Mağaza Dağılımı
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
+              </div>
+              <div className="p-6">
                 {storeDistribution.length === 0 ? (
                   <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                     Veri bulunamadı
@@ -605,18 +607,18 @@ export default function OrdersPage() {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Status Distribution Bar Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base font-medium flex items-center gap-2">
+            <div>
+              <div className="px-6 py-4 border-b">
+                <h3 className="text-base font-medium flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" />
                   Durum Dağılımı
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </h3>
+              </div>
+              <div className="p-6">
                 {statusDistribution.length === 0 ? (
                   <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                     Veri bulunamadı
@@ -657,8 +659,8 @@ export default function OrdersPage() {
                     </BarChart>
                   </ChartContainer>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
