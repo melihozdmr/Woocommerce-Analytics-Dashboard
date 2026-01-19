@@ -47,17 +47,29 @@ function DashboardLoadingSkeleton() {
       <div className="hidden md:flex w-64 flex-col p-2">
         {/* Team switcher */}
         <div className="p-2">
-          <Skeleton className="h-12 w-full rounded-lg" />
+          <div className="flex items-center gap-2 p-2">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-20 mb-1" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          </div>
         </div>
         {/* Nav items */}
         <div className="flex-1 p-2 space-y-1">
           {[...Array(9)].map((_, i) => (
-            <Skeleton key={i} className="h-9 w-full rounded-md" />
+            <Skeleton key={i} className="h-8 w-full rounded-md" />
           ))}
         </div>
         {/* User */}
         <div className="p-2">
-          <Skeleton className="h-12 w-full rounded-lg" />
+          <div className="flex items-center gap-2 p-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-24 mb-1" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
         </div>
       </div>
       {/* Main content skeleton - matches SidebarInset */}
@@ -65,22 +77,32 @@ function DashboardLoadingSkeleton() {
         {/* Header */}
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <Skeleton className="h-7 w-7 rounded-md" />
-          <Skeleton className="h-4 w-px" />
-          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-px bg-border" />
+          <Skeleton className="h-4 w-16 mr-1" />
+          <Skeleton className="h-4 w-4" />
+          <Skeleton className="h-4 w-24" />
         </header>
-        {/* Stats row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 border-b">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className={`p-4 ${i < 3 ? 'border-r' : ''}`}>
-              <Skeleton className="h-4 w-24 mb-2" />
+        {/* Page header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+        {/* Content grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-b">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className={`p-6 ${i < 2 ? 'lg:border-r' : ''} ${i === 0 ? 'md:border-r' : ''}`}>
+              <Skeleton className="h-12 w-12 mb-4" />
+              <Skeleton className="h-5 w-24 mb-2" />
+              <Skeleton className="h-4 w-32 mb-4" />
               <Skeleton className="h-8 w-20" />
             </div>
           ))}
         </div>
-        {/* Content area */}
-        <div className="flex-1 p-4">
-          <Skeleton className="h-48 w-full rounded-lg" />
+        {/* Secondary section */}
+        <div className="px-4 py-3 border-b">
+          <Skeleton className="h-5 w-40" />
         </div>
+        <div className="flex-1" />
       </main>
     </div>
   );

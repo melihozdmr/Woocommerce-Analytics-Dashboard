@@ -26,32 +26,33 @@ export function useCompany() {
 function CompanyLoadingSkeleton() {
   return (
     <>
-      {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 border-b">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className={`p-4 ${i < 3 ? 'border-r' : ''}`}>
-            <Skeleton className="h-4 w-24 mb-2" />
+      {/* Page header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <Skeleton className="h-5 w-32" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-9 w-24" />
+        </div>
+      </div>
+      {/* Content grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-b">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className={`p-6 ${i < 2 ? 'lg:border-r' : ''} ${i === 0 ? 'md:border-r' : ''}`}>
+            <Skeleton className="h-12 w-12 mb-4" />
+            <Skeleton className="h-5 w-24 mb-2" />
+            <Skeleton className="h-4 w-32 mb-4" />
             <Skeleton className="h-8 w-20" />
           </div>
         ))}
       </div>
-      {/* Chart sections */}
-      <div className="border-b">
-        <div className="flex items-center gap-2 px-4 py-3 border-b">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="p-4">
-          <Skeleton className="h-48 w-full" />
-        </div>
+      {/* Secondary section */}
+      <div className="px-4 py-3 border-b">
+        <Skeleton className="h-5 w-40" />
       </div>
-      <div className="border-b">
-        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/50">
-          <Skeleton className="h-4 w-4 rounded" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="p-4 bg-muted/50">
-          <Skeleton className="h-48 w-full" />
+      <div className="p-6">
+        <div className="text-center py-8">
+          <Skeleton className="h-12 w-12 mx-auto mb-4 rounded-full" />
+          <Skeleton className="h-5 w-48 mx-auto mb-2" />
+          <Skeleton className="h-4 w-64 mx-auto" />
         </div>
       </div>
     </>
