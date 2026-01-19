@@ -387,8 +387,8 @@ export class OrderService {
           gte: startDate,
           lte: endDate,
         },
-        // Only count completed and processing orders for revenue
-        status: { in: ['completed', 'processing'] },
+        // Count completed, processing, pending, and on-hold orders (exclude cancelled and refunded)
+        status: { notIn: ['cancelled', 'refunded', 'failed'] },
       },
       select: {
         total: true,
@@ -410,16 +410,23 @@ export class OrderService {
       }
     } else {
       // Daily grouping - Initialize all dates in range
+      // Use Turkey timezone (UTC+3) for date grouping
+      const getLocalDateKey = (date: Date): string => {
+        const turkeyOffset = 3 * 60; // UTC+3 in minutes
+        const localDate = new Date(date.getTime() + turkeyOffset * 60 * 1000);
+        return localDate.toISOString().split('T')[0];
+      };
+
       const currentDate = new Date(startDate);
       while (currentDate <= endDate) {
-        const dateKey = currentDate.toISOString().split('T')[0];
+        const dateKey = getLocalDateKey(currentDate);
         trendMap.set(dateKey, { orders: 0, revenue: 0 });
         currentDate.setDate(currentDate.getDate() + 1);
       }
 
       // Fill in actual data
       for (const order of orders) {
-        const dateKey = order.orderDate.toISOString().split('T')[0];
+        const dateKey = getLocalDateKey(order.orderDate);
         const existing = trendMap.get(dateKey);
         if (existing) {
           existing.orders += 1;
