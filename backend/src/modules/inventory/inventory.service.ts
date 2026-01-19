@@ -1,13 +1,15 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 import { WooCommerceClient } from '../store/woocommerce.client';
 import { WCSCClient } from '../store/wcsc.client';
+import { decrypt } from '../../common/utils/crypto.util';
 
 export interface InventorySummary {
   totalStock: number;
   totalStockValue: number;
-  estimatedRevenue: number;
+  netProfit: number;
   criticalStockCount: number;
   outOfStockCount: number;
   productsWithoutPurchasePrice: number;
@@ -19,7 +21,7 @@ export interface StoreInventory {
   storeName: string;
   totalStock: number;
   totalStockValue: number;
-  estimatedRevenue: number;
+  netProfit: number;
   criticalStockCount: number;
   productCount: number;
 }
@@ -41,22 +43,30 @@ export interface CriticalProduct {
 
 @Injectable()
 export class InventoryService {
-  constructor(private prisma: PrismaService) {}
+  private readonly encryptionKey: string;
+
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {
+    this.encryptionKey = this.configService.get<string>('encryption.key') || 'default-encryption-key-change-in-production';
+  }
 
   async getSummary(companyId: string, criticalThreshold: number = 5): Promise<InventorySummary> {
-    // Get all stores for this company
+    // Get all stores for this company with commission and shipping info
     const stores = await this.prisma.store.findMany({
       where: { companyId, status: 'ACTIVE' },
-      select: { id: true, lastSyncAt: true },
+      select: { id: true, lastSyncAt: true, commissionRate: true, shippingCost: true },
     });
 
     const storeIds = stores.map((s) => s.id);
+    const storeMap = new Map(stores.map((s) => [s.id, { commissionRate: Number(s.commissionRate) || 0, shippingCost: Number(s.shippingCost) || 0 }]));
 
     if (storeIds.length === 0) {
       return {
         totalStock: 0,
         totalStockValue: 0,
-        estimatedRevenue: 0,
+        netProfit: 0,
         criticalStockCount: 0,
         outOfStockCount: 0,
         productsWithoutPurchasePrice: 0,
@@ -72,6 +82,7 @@ export class InventoryService {
       },
       select: {
         id: true,
+        storeId: true,
         stockQuantity: true,
         price: true,
         purchasePrice: true,
@@ -92,6 +103,7 @@ export class InventoryService {
             product: {
               select: {
                 id: true,
+                storeId: true,
                 stockQuantity: true,
                 price: true,
                 purchasePrice: true,
@@ -110,7 +122,7 @@ export class InventoryService {
 
     // Create a map of productId -> mappingId and source product info
     const productToMappingId = new Map<string, string>();
-    const mappingSourceStock = new Map<string, { stock: number; price: number; purchasePrice: number }>();
+    const mappingSourceStock = new Map<string, { stock: number; price: number; purchasePrice: number; storeId: string }>();
 
     for (const mapping of mappings) {
       // İlk item kaynak (source)
@@ -129,6 +141,7 @@ export class InventoryService {
           stock: sourceStock,
           price: sourcePrice,
           purchasePrice: sourcePurchasePrice,
+          storeId: sourceItem.product.storeId,
         });
       }
 
@@ -140,7 +153,7 @@ export class InventoryService {
     // Calculate totals - for mapped products, use source stock only (not combined)
     let totalStock = 0;
     let totalStockValue = 0;
-    let estimatedRevenue = 0;
+    let netProfit = 0;
     let criticalStockCount = 0;
     let outOfStockCount = 0;
     let productsWithoutPurchasePrice = 0;
@@ -152,6 +165,7 @@ export class InventoryService {
       let effectiveStock: number;
       let effectivePrice: number;
       let effectivePurchasePrice: number;
+      let effectiveStoreId: string = product.storeId;
 
       if (product.productType === 'variable' && product.variations.length > 0) {
         effectiveStock = product.variations.reduce((sum, v) => sum + v.stockQuantity, 0);
@@ -180,13 +194,21 @@ export class InventoryService {
           effectiveStock = sourceInfo.stock;
           effectivePrice = sourceInfo.price;
           effectivePurchasePrice = sourceInfo.purchasePrice;
+          effectiveStoreId = sourceInfo.storeId;
         }
       }
+
+      // Get store commission and shipping
+      const storeInfo = storeMap.get(effectiveStoreId) || { commissionRate: 0, shippingCost: 0 };
+      const commissionAmount = effectivePrice * (storeInfo.commissionRate / 100);
+
+      // Net profit per unit = sale price - purchase price - commission - shipping
+      const profitPerUnit = effectivePrice - effectivePurchasePrice - commissionAmount - storeInfo.shippingCost;
 
       // Add to totals
       totalStock += effectiveStock;
       totalStockValue += effectivePurchasePrice * effectiveStock;
-      estimatedRevenue += effectivePrice * effectiveStock;
+      netProfit += profitPerUnit * effectiveStock;
 
       // Count critical/out of stock
       if (effectiveStock === 0) outOfStockCount++;
@@ -205,7 +227,7 @@ export class InventoryService {
     return {
       totalStock,
       totalStockValue: Math.round(totalStockValue * 100) / 100,
-      estimatedRevenue: Math.round(estimatedRevenue * 100) / 100,
+      netProfit: Math.round(netProfit * 100) / 100,
       criticalStockCount,
       outOfStockCount,
       productsWithoutPurchasePrice,
@@ -219,6 +241,8 @@ export class InventoryService {
       select: {
         id: true,
         name: true,
+        commissionRate: true,
+        shippingCost: true,
         products: {
           where: { isActive: true },
           select: {
@@ -234,18 +258,23 @@ export class InventoryService {
     return stores.map((store) => {
       let totalStock = 0;
       let totalStockValue = 0;
-      let estimatedRevenue = 0;
+      let netProfit = 0;
       let criticalStockCount = 0;
+
+      const commissionRate = Number(store.commissionRate) || 0;
+      const shippingCost = Number(store.shippingCost) || 0;
 
       for (const product of store.products) {
         if (product.productType === 'simple') {
           const qty = product.stockQuantity;
           const price = Number(product.price);
           const purchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
+          const commission = price * (commissionRate / 100);
+          const profitPerUnit = price - purchasePrice - commission - shippingCost;
 
           totalStock += qty;
           totalStockValue += purchasePrice * qty;
-          estimatedRevenue += price * qty;
+          netProfit += profitPerUnit * qty;
 
           if (qty > 0 && qty <= criticalThreshold) criticalStockCount++;
         }
@@ -256,7 +285,7 @@ export class InventoryService {
         storeName: store.name,
         totalStock,
         totalStockValue: Math.round(totalStockValue * 100) / 100,
-        estimatedRevenue: Math.round(estimatedRevenue * 100) / 100,
+        netProfit: Math.round(netProfit * 100) / 100,
         criticalStockCount,
         productCount: store.products.length,
       };
@@ -794,23 +823,38 @@ export class InventoryService {
       throw new BadRequestException('Ürün bulunamadı');
     }
 
-    // Create WooCommerce client
-    const wcClient = new WooCommerceClient({
-      url: product.store.url,
-      consumerKey: product.store.consumerKey,
-      consumerSecret: product.store.consumerSecret,
-    });
+    // Check if WCSC plugin is connected - prefer WCSC over WooCommerce API
+    if (product.store.hasWcscPlugin && product.store.wcscApiKey && product.store.wcscApiSecret) {
+      // Use WCSC plugin to update stock
+      const wcscClient = new WCSCClient({
+        url: product.store.url,
+        apiKey: decrypt(product.store.wcscApiKey, this.encryptionKey),
+        apiSecret: decrypt(product.store.wcscApiSecret, this.encryptionKey),
+      });
 
-    // Update stock in WooCommerce
-    try {
-      await wcClient.updateProductStock(product.wcProductId, stockQuantity);
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        throw new BadRequestException(
-          'WooCommerce API anahtarı yazma yetkisine sahip değil. Lütfen "Read/Write" yetkili yeni bir API anahtarı oluşturun.'
-        );
+      try {
+        await wcscClient.updateStock(product.wcProductId, stockQuantity);
+      } catch (error: any) {
+        throw new BadRequestException('WCSC stok güncellemesi başarısız: ' + (error.message || 'Bilinmeyen hata'));
       }
-      throw new BadRequestException('WooCommerce stok güncellemesi başarısız: ' + (error.message || 'Bilinmeyen hata'));
+    } else {
+      // Fall back to WooCommerce REST API
+      const wcClient = new WooCommerceClient({
+        url: product.store.url,
+        consumerKey: decrypt(product.store.consumerKey, this.encryptionKey),
+        consumerSecret: decrypt(product.store.consumerSecret, this.encryptionKey),
+      });
+
+      try {
+        await wcClient.updateProductStock(product.wcProductId, stockQuantity);
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          throw new BadRequestException(
+            'WooCommerce API anahtarı yazma yetkisine sahip değil. Lütfen "Read/Write" yetkili yeni bir API anahtarı oluşturun veya WC Stock Connector eklentisini bağlayın.'
+          );
+        }
+        throw new BadRequestException('WooCommerce stok güncellemesi başarısız: ' + (error.message || 'Bilinmeyen hata'));
+      }
     }
 
     // Update local database
@@ -854,27 +898,44 @@ export class InventoryService {
       throw new BadRequestException('Varyasyon bulunamadı');
     }
 
-    // Create WooCommerce client
-    const wcClient = new WooCommerceClient({
-      url: variation.product.store.url,
-      consumerKey: variation.product.store.consumerKey,
-      consumerSecret: variation.product.store.consumerSecret,
-    });
+    const store = variation.product.store;
 
-    // Update stock in WooCommerce
-    try {
-      await wcClient.updateVariationStock(
-        variation.product.wcProductId,
-        variation.wcVariationId,
-        stockQuantity,
-      );
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        throw new BadRequestException(
-          'WooCommerce API anahtarı yazma yetkisine sahip değil. Lütfen "Read/Write" yetkili yeni bir API anahtarı oluşturun.'
-        );
+    // Check if WCSC plugin is connected - prefer WCSC over WooCommerce API
+    if (store.hasWcscPlugin && store.wcscApiKey && store.wcscApiSecret) {
+      // Use WCSC plugin to update stock
+      const wcscClient = new WCSCClient({
+        url: store.url,
+        apiKey: decrypt(store.wcscApiKey, this.encryptionKey),
+        apiSecret: decrypt(store.wcscApiSecret, this.encryptionKey),
+      });
+
+      try {
+        await wcscClient.updateStock(variation.wcVariationId, stockQuantity, true);
+      } catch (error: any) {
+        throw new BadRequestException('WCSC varyasyon stok güncellemesi başarısız: ' + (error.message || 'Bilinmeyen hata'));
       }
-      throw new BadRequestException('WooCommerce stok güncellemesi başarısız: ' + (error.message || 'Bilinmeyen hata'));
+    } else {
+      // Fall back to WooCommerce REST API
+      const wcClient = new WooCommerceClient({
+        url: store.url,
+        consumerKey: decrypt(store.consumerKey, this.encryptionKey),
+        consumerSecret: decrypt(store.consumerSecret, this.encryptionKey),
+      });
+
+      try {
+        await wcClient.updateVariationStock(
+          variation.product.wcProductId,
+          variation.wcVariationId,
+          stockQuantity,
+        );
+      } catch (error: any) {
+        if (error.response?.status === 401) {
+          throw new BadRequestException(
+            'WooCommerce API anahtarı yazma yetkisine sahip değil. Lütfen "Read/Write" yetkili yeni bir API anahtarı oluşturun veya WC Stock Connector eklentisini bağlayın.'
+          );
+        }
+        throw new BadRequestException('WooCommerce stok güncellemesi başarısız: ' + (error.message || 'Bilinmeyen hata'));
+      }
     }
 
     // Update local database
@@ -917,8 +978,8 @@ export class InventoryService {
       try {
         const wcscClient = new WCSCClient({
           url: product.store.url,
-          apiKey: product.store.wcscApiKey,
-          apiSecret: product.store.wcscApiSecret,
+          apiKey: decrypt(product.store.wcscApiKey, this.encryptionKey),
+          apiSecret: decrypt(product.store.wcscApiSecret, this.encryptionKey),
         });
         await wcscClient.updatePurchasePrice(product.wcProductId, purchasePrice);
       } catch (error: any) {
@@ -1090,8 +1151,8 @@ export class InventoryService {
 
     const wcscClient = new WCSCClient({
       url: store.url,
-      apiKey: store.wcscApiKey,
-      apiSecret: store.wcscApiSecret,
+      apiKey: decrypt(store.wcscApiKey, this.encryptionKey),
+      apiSecret: decrypt(store.wcscApiSecret, this.encryptionKey),
     });
 
     // Get all products from WCSC

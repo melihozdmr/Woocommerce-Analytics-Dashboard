@@ -18,6 +18,11 @@ import {
   Percent,
   Truck,
   Settings,
+  Plug,
+  Key,
+  Copy,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,6 +34,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useStoreStore, CreateStoreDto } from '@/stores/storeStore';
 import { toast } from 'sonner';
@@ -111,6 +117,25 @@ export default function StoresPage() {
   const [settingsModalStoreId, setSettingsModalStoreId] = useState<string | null>(null);
   const [deleteConfirmStoreId, setDeleteConfirmStoreId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // WCSC state
+  const [wcscState, setWcscState] = useState<{
+    apiKey: string;
+    apiSecret: string;
+    showSecret: boolean;
+    testing: boolean;
+    testResult: { success: boolean; error?: string } | null;
+    connecting: boolean;
+    disconnecting: boolean;
+  }>({
+    apiKey: '',
+    apiSecret: '',
+    showSecret: false,
+    testing: false,
+    testResult: null,
+    connecting: false,
+    disconnecting: false,
+  });
 
   const totalSteps = selectedMarketplace?.steps?.length || 0;
   const isLastStep = currentStep === totalSteps; // Test step
@@ -205,6 +230,82 @@ export default function StoresPage() {
       }));
       toast.error(errorMessage);
     }
+  };
+
+  // WCSC functions
+  const handleTestWcsc = async () => {
+    if (!currentCompany?.id || !settingsModalStoreId) return;
+    if (!wcscState.apiKey || !wcscState.apiSecret) {
+      toast.error('API Key ve API Secret gerekli');
+      return;
+    }
+
+    setWcscState(prev => ({ ...prev, testing: true, testResult: null }));
+
+    try {
+      const response = await api.post(`/company/${currentCompany.id}/stores/${settingsModalStoreId}/test-wcsc`, {
+        apiKey: wcscState.apiKey,
+        apiSecret: wcscState.apiSecret,
+      });
+
+      setWcscState(prev => ({
+        ...prev,
+        testing: false,
+        testResult: { success: response.data.success, error: response.data.error },
+      }));
+    } catch (error: any) {
+      setWcscState(prev => ({
+        ...prev,
+        testing: false,
+        testResult: { success: false, error: error.response?.data?.message || 'Test başarısız' },
+      }));
+    }
+  };
+
+  const handleConnectWcsc = async () => {
+    if (!currentCompany?.id || !settingsModalStoreId) return;
+    if (!wcscState.apiKey || !wcscState.apiSecret) {
+      toast.error('API Key ve API Secret gerekli');
+      return;
+    }
+
+    setWcscState(prev => ({ ...prev, connecting: true }));
+
+    try {
+      await api.post(`/company/${currentCompany.id}/stores/${settingsModalStoreId}/connect-wcsc`, {
+        apiKey: wcscState.apiKey,
+        apiSecret: wcscState.apiSecret,
+      });
+
+      toast.success('WC Stock Connector bağlandı');
+      fetchStores(currentCompany.id);
+      setWcscState(prev => ({ ...prev, connecting: false, apiKey: '', apiSecret: '', testResult: null }));
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bağlantı başarısız');
+      setWcscState(prev => ({ ...prev, connecting: false }));
+    }
+  };
+
+  const handleDisconnectWcsc = async () => {
+    if (!currentCompany?.id || !settingsModalStoreId) return;
+
+    setWcscState(prev => ({ ...prev, disconnecting: true }));
+
+    try {
+      await api.post(`/company/${currentCompany.id}/stores/${settingsModalStoreId}/disconnect-wcsc`);
+
+      toast.success('WC Stock Connector bağlantısı kesildi');
+      fetchStores(currentCompany.id);
+      setWcscState(prev => ({ ...prev, disconnecting: false }));
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bağlantı kesilemedi');
+      setWcscState(prev => ({ ...prev, disconnecting: false }));
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Panoya kopyalandı');
   };
 
   const handleMarketplaceClick = (marketplace: typeof marketplaces[0]) => {
@@ -819,8 +920,13 @@ export default function StoresPage() {
       </Dialog>
 
       {/* Settings Modal */}
-      <Dialog open={!!settingsModalStoreId} onOpenChange={(open) => !open && setSettingsModalStoreId(null)}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={!!settingsModalStoreId} onOpenChange={(open) => {
+        if (!open) {
+          setSettingsModalStoreId(null);
+          setWcscState({ apiKey: '', apiSecret: '', showSecret: false, testing: false, testResult: null, connecting: false, disconnecting: false });
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
@@ -828,91 +934,296 @@ export default function StoresPage() {
             </DialogTitle>
           </DialogHeader>
           {settingsModalStoreId && settingsState[settingsModalStoreId] && (
-            <div className="space-y-4 py-4">
-              {/* Store Info */}
-              <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                <img
-                  src="https://cdn.worldvectorlogo.com/logos/woocommerce.svg"
-                  alt="WooCommerce"
-                  className="w-8 h-8 object-contain"
-                />
-                <div>
-                  <p className="font-medium text-sm">
-                    {stores.find((s) => s.id === settingsModalStoreId)?.name}
-                  </p>
+            <Tabs defaultValue="general" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="general">Genel</TabsTrigger>
+                <TabsTrigger value="wcsc" className="flex items-center gap-1">
+                  <Plug className="h-3.5 w-3.5" />
+                  Stok Sync
+                </TabsTrigger>
+              </TabsList>
+
+              {/* General Tab */}
+              <TabsContent value="general" className="space-y-4 mt-4">
+                {/* Store Info */}
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                  <img
+                    src="https://cdn.worldvectorlogo.com/logos/woocommerce.svg"
+                    alt="WooCommerce"
+                    className="w-8 h-8 object-contain"
+                  />
+                  <div>
+                    <p className="font-medium text-sm">
+                      {stores.find((s) => s.id === settingsModalStoreId)?.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {stores.find((s) => s.id === settingsModalStoreId)?.url.replace(/^https?:\/\//, '')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Commission Rate */}
+                <div className="space-y-2">
+                  <Label htmlFor="commission" className="flex items-center gap-2">
+                    <Percent className="h-4 w-4 text-muted-foreground" />
+                    Komisyon Oranı
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="commission"
+                      type="text"
+                      inputMode="decimal"
+                      value={settingsState[settingsModalStoreId].commissionRate}
+                      onChange={(e) => handleSettingsChange(settingsModalStoreId, 'commissionRate', e.target.value)}
+                      placeholder="0"
+                      className="pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    {stores.find((s) => s.id === settingsModalStoreId)?.url.replace(/^https?:\/\//, '')}
+                    Pazaryeri komisyon oranı (0-100 arası)
                   </p>
                 </div>
-              </div>
 
-              {/* Commission Rate */}
-              <div className="space-y-2">
-                <Label htmlFor="commission" className="flex items-center gap-2">
-                  <Percent className="h-4 w-4 text-muted-foreground" />
-                  Komisyon Oranı
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="commission"
-                    type="text"
-                    inputMode="decimal"
-                    value={settingsState[settingsModalStoreId].commissionRate}
-                    onChange={(e) => handleSettingsChange(settingsModalStoreId, 'commissionRate', e.target.value)}
-                    placeholder="0"
-                    className="pr-8"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                {/* Shipping Cost */}
+                <div className="space-y-2">
+                  <Label htmlFor="shipping" className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    Kargo Maliyeti
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="shipping"
+                      type="text"
+                      inputMode="decimal"
+                      value={settingsState[settingsModalStoreId].shippingCost}
+                      onChange={(e) => handleSettingsChange(settingsModalStoreId, 'shippingCost', e.target.value)}
+                      placeholder="0"
+                      className="pr-8"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">TL</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Sabit kargo maliyeti (sipariş başına)
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Pazaryeri komisyon oranı (0-100 arası)
+
+                {/* Last Updated */}
+                <p className="text-xs text-muted-foreground text-center">
+                  Son güncelleme: {new Date(stores.find((s) => s.id === settingsModalStoreId)?.updatedAt || '').toLocaleString('tr-TR')}
                 </p>
-              </div>
 
-              {/* Shipping Cost */}
-              <div className="space-y-2">
-                <Label htmlFor="shipping" className="flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-muted-foreground" />
-                  Kargo Maliyeti
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="shipping"
-                    type="text"
-                    inputMode="decimal"
-                    value={settingsState[settingsModalStoreId].shippingCost}
-                    onChange={(e) => handleSettingsChange(settingsModalStoreId, 'shippingCost', e.target.value)}
-                    placeholder="0"
-                    className="pr-8"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">TL</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Sabit kargo maliyeti (sipariş başına)
-                </p>
-              </div>
+                {/* Save Button */}
+                <Button
+                  className="w-full"
+                  onClick={() => handleSaveSettings(settingsModalStoreId)}
+                  disabled={settingsState[settingsModalStoreId].saving}
+                >
+                  {settingsState[settingsModalStoreId].saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    'Kaydet'
+                  )}
+                </Button>
+              </TabsContent>
 
-              {/* Last Updated */}
-              <p className="text-xs text-muted-foreground text-center">
-                Son güncelleme: {new Date(stores.find((s) => s.id === settingsModalStoreId)?.updatedAt || '').toLocaleString('tr-TR')}
-              </p>
+              {/* WCSC Tab */}
+              <TabsContent value="wcsc" className="space-y-4 mt-4">
+                {(() => {
+                  const currentStore = stores.find((s) => s.id === settingsModalStoreId);
+                  const isConnected = currentStore?.hasWcscPlugin;
 
-              {/* Save Button */}
-              <Button
-                className="w-full"
-                onClick={() => handleSaveSettings(settingsModalStoreId)}
-                disabled={settingsState[settingsModalStoreId].saving}
-              >
-                {settingsState[settingsModalStoreId].saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Kaydediliyor...
-                  </>
-                ) : (
-                  'Kaydet'
-                )}
-              </Button>
-            </div>
+                  if (isConnected) {
+                    return (
+                      <>
+                        {/* Connected State */}
+                        <div className="p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                            <Check className="h-5 w-5" />
+                            <span className="font-medium">WC Stock Connector Bağlı</span>
+                          </div>
+                          <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                            Stok değişiklikleri otomatik olarak senkronize edilecek.
+                          </p>
+                        </div>
+
+                        {/* Webhook URL */}
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Link className="h-4 w-4 text-muted-foreground" />
+                            Webhook URL
+                          </Label>
+                          <div className="flex gap-2">
+                            <Input
+                              readOnly
+                              value={`${window.location.origin}/api/webhook/stock-sync`}
+                              className="text-xs font-mono"
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => copyToClipboard(`${window.location.origin}/api/webhook/stock-sync`)}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Bu URL'i WordPress eklentisindeki Dashboard URL alanına girin.
+                          </p>
+                        </div>
+
+                        {/* Last Sync */}
+                        {currentStore?.wcscLastSyncAt && (
+                          <div className="text-sm text-muted-foreground">
+                            Son webhook: {new Date(currentStore.wcscLastSyncAt).toLocaleString('tr-TR')}
+                          </div>
+                        )}
+
+                        {/* Disconnect Button */}
+                        <Button
+                          variant="destructive"
+                          className="w-full"
+                          onClick={handleDisconnectWcsc}
+                          disabled={wcscState.disconnecting}
+                        >
+                          {wcscState.disconnecting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Bağlantı kesiliyor...
+                            </>
+                          ) : (
+                            'Bağlantıyı Kes'
+                          )}
+                        </Button>
+                      </>
+                    );
+                  }
+
+                  return (
+                    <>
+                      {/* Not Connected State */}
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Plug className="h-5 w-5 text-muted-foreground" />
+                          <span className="font-medium">WC Stock Connector</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          WordPress sitenize WC Stock Connector eklentisini kurun ve aşağıdaki bilgileri girin.
+                        </p>
+                      </div>
+
+                      {/* API Key */}
+                      <div className="space-y-2">
+                        <Label htmlFor="wcsc-api-key" className="flex items-center gap-2">
+                          <Key className="h-4 w-4 text-muted-foreground" />
+                          API Key
+                        </Label>
+                        <Input
+                          id="wcsc-api-key"
+                          type="text"
+                          value={wcscState.apiKey}
+                          onChange={(e) => setWcscState(prev => ({ ...prev, apiKey: e.target.value, testResult: null }))}
+                          placeholder="Eklentiden kopyalayın"
+                        />
+                      </div>
+
+                      {/* API Secret */}
+                      <div className="space-y-2">
+                        <Label htmlFor="wcsc-api-secret" className="flex items-center gap-2">
+                          <Key className="h-4 w-4 text-muted-foreground" />
+                          API Secret
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="wcsc-api-secret"
+                            type={wcscState.showSecret ? 'text' : 'password'}
+                            value={wcscState.apiSecret}
+                            onChange={(e) => setWcscState(prev => ({ ...prev, apiSecret: e.target.value, testResult: null }))}
+                            placeholder="Eklentiden kopyalayın"
+                            className="pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setWcscState(prev => ({ ...prev, showSecret: !prev.showSecret }))}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {wcscState.showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Test Result */}
+                      {wcscState.testResult && (
+                        <div
+                          className={cn(
+                            'flex items-center gap-2 p-3 rounded-lg text-sm',
+                            wcscState.testResult.success
+                              ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300'
+                              : 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300'
+                          )}
+                        >
+                          {wcscState.testResult.success ? (
+                            <>
+                              <Check className="h-4 w-4" />
+                              Bağlantı başarılı!
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle className="h-4 w-4" />
+                              {wcscState.testResult.error}
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Test Button */}
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleTestWcsc}
+                        disabled={wcscState.testing || !wcscState.apiKey || !wcscState.apiSecret}
+                      >
+                        {wcscState.testing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Test ediliyor...
+                          </>
+                        ) : (
+                          'Bağlantıyı Test Et'
+                        )}
+                      </Button>
+
+                      {/* Connect Button */}
+                      <Button
+                        className="w-full"
+                        onClick={handleConnectWcsc}
+                        disabled={wcscState.connecting || !wcscState.testResult?.success}
+                      >
+                        {wcscState.connecting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Bağlanıyor...
+                          </>
+                        ) : (
+                          'Eklentiyi Bağla'
+                        )}
+                      </Button>
+
+                      {/* Help Link */}
+                      <p className="text-xs text-muted-foreground text-center">
+                        Eklentiyi indirmek için{' '}
+                        <a href="#" className="text-primary hover:underline">
+                          buraya tıklayın
+                        </a>
+                      </p>
+                    </>
+                  );
+                })()}
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>

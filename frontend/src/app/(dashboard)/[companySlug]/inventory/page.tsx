@@ -35,7 +35,9 @@ import {
 import { useCompanyStore } from '@/stores/companyStore';
 import { useStoreStore } from '@/stores/storeStore';
 import { useInventoryStore } from '@/stores/inventoryStore';
+import { EditableStockCell, EditablePriceCell } from '@/components/inventory';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 type StockFilter = 'all' | 'instock' | 'critical' | 'outofstock';
 type MappingFilter = 'all' | 'mapped' | 'unmapped';
@@ -56,6 +58,9 @@ export default function InventoryPage() {
     isLoading,
     fetchProducts,
     fetchSummary,
+    updateProductStock,
+    updateProductPurchasePrice,
+    updateProductInList,
   } = useInventoryStore();
 
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
@@ -185,6 +190,30 @@ export default function InventoryPage() {
     return num.toLocaleString('tr-TR') + ' TL';
   };
 
+  const handleStockUpdate = async (productId: string, newStock: number): Promise<boolean> => {
+    if (!currentCompany?.id) return false;
+    const success = await updateProductStock(currentCompany.id, productId, newStock);
+    if (success) {
+      updateProductInList(productId, { stockQuantity: newStock });
+      toast.success('Stok güncellendi');
+    } else {
+      toast.error('Stok güncellenemedi');
+    }
+    return success;
+  };
+
+  const handlePurchasePriceUpdate = async (productId: string, newPrice: number): Promise<boolean> => {
+    if (!currentCompany?.id) return false;
+    const success = await updateProductPurchasePrice(currentCompany.id, productId, newPrice);
+    if (success) {
+      updateProductInList(productId, { purchasePrice: newPrice });
+      toast.success('Alış fiyatı güncellendi');
+    } else {
+      toast.error('Alış fiyatı güncellenemedi');
+    }
+    return success;
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -217,11 +246,11 @@ export default function InventoryPage() {
         </div>
         <div className="px-6 py-4 border-r">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Tahmini Gelir</span>
+            <span className="text-sm text-muted-foreground">Net Kar</span>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </div>
-          <p className="text-2xl font-semibold mt-1">
-            {summary ? formatCurrency(summary.estimatedRevenue) : '-'}
+          <p className={`text-2xl font-semibold mt-1 ${summary && summary.netProfit < 0 ? 'text-red-500' : 'text-green-600'}`}>
+            {summary ? formatCurrency(summary.netProfit) : '-'}
           </p>
         </div>
         <div className="px-6 py-4">
@@ -321,10 +350,26 @@ export default function InventoryPage() {
                 </button>
               </DataTableHead>
               <DataTableHead>SKU</DataTableHead>
-              <DataTableHead className="text-center">Mevcut Olmayan</DataTableHead>
-              <DataTableHead className="text-center">Ayrılmış</DataTableHead>
-              <DataTableHead className="text-center">Mevcut</DataTableHead>
-              <DataTableHead className="text-center pr-6">Eldeki Miktar</DataTableHead>
+              <DataTableHead>Mağaza</DataTableHead>
+              <DataTableHead className="text-center">
+                <button
+                  onClick={() => handleSort('stockQuantity')}
+                  className="flex items-center gap-1 hover:text-gray-900 mx-auto"
+                >
+                  Stok
+                  <ArrowUpDown className="h-3 w-3" />
+                </button>
+              </DataTableHead>
+              <DataTableHead className="text-center">
+                <button
+                  onClick={() => handleSort('price')}
+                  className="flex items-center gap-1 hover:text-gray-900 mx-auto"
+                >
+                  Satış Fiyatı
+                  <ArrowUpDown className="h-3 w-3" />
+                </button>
+              </DataTableHead>
+              <DataTableHead className="text-center pr-6">Alış Fiyatı</DataTableHead>
             </DataTableRow>
           </DataTableHeader>
           <DataTableBody>
@@ -338,10 +383,10 @@ export default function InventoryPage() {
                     </div>
                   </DataTableCell>
                   <DataTableCell><Skeleton className="h-4 w-20" /></DataTableCell>
-                  <DataTableCell><Skeleton className="h-4 w-8 mx-auto" /></DataTableCell>
-                  <DataTableCell><Skeleton className="h-4 w-8 mx-auto" /></DataTableCell>
+                  <DataTableCell><Skeleton className="h-4 w-24" /></DataTableCell>
                   <DataTableCell><Skeleton className="h-8 w-16 mx-auto" /></DataTableCell>
-                  <DataTableCell className="pr-6"><Skeleton className="h-8 w-16 mx-auto" /></DataTableCell>
+                  <DataTableCell><Skeleton className="h-4 w-20 mx-auto" /></DataTableCell>
+                  <DataTableCell className="pr-6"><Skeleton className="h-8 w-20 mx-auto" /></DataTableCell>
                 </DataTableRow>
               ))
             ) : products.length === 0 ? (
@@ -372,7 +417,7 @@ export default function InventoryPage() {
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
+                        <p className="font-medium text-gray-900 line-clamp-1">{product.name}</p>
                         {product.productType === 'variable' && product.variationCount > 0 && (
                           <span className="inline-flex items-center px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded mt-0.5">
                             {product.variationCount} varyant
@@ -381,31 +426,28 @@ export default function InventoryPage() {
                       </div>
                     </Link>
                   </DataTableCell>
-                  <DataTableCell className="text-gray-500">
-                    {product.sku || 'SKU yok'}
+                  <DataTableCell className="text-gray-500 text-sm">
+                    {product.sku || '-'}
                   </DataTableCell>
-                  <DataTableCell className="text-center text-gray-600">
-                    0
-                  </DataTableCell>
-                  <DataTableCell className="text-center text-gray-600">
-                    0
+                  <DataTableCell className="text-gray-600 text-sm">
+                    {product.storeName}
                   </DataTableCell>
                   <DataTableCell className="text-center">
-                    <Input
-                      type="number"
-                      defaultValue={product.stockQuantity}
-                      className="w-16 h-8 text-center mx-auto"
-                      min={0}
-                      readOnly
+                    <EditableStockCell
+                      value={product.stockQuantity}
+                      onSave={(newStock) => handleStockUpdate(product.id, newStock)}
+                      disabled={product.productType === 'variable'}
+                      className="mx-auto"
                     />
                   </DataTableCell>
+                  <DataTableCell className="text-center text-sm font-medium">
+                    {formatCurrency(product.price)}
+                  </DataTableCell>
                   <DataTableCell className="text-center pr-6">
-                    <Input
-                      type="number"
-                      defaultValue={product.stockQuantity}
-                      className="w-16 h-8 text-center mx-auto"
-                      min={0}
-                      readOnly
+                    <EditablePriceCell
+                      value={product.purchasePrice}
+                      onSave={(newPrice) => handlePurchasePriceUpdate(product.id, newPrice)}
+                      className="mx-auto"
                     />
                   </DataTableCell>
                 </DataTableRow>

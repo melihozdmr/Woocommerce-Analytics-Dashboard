@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Building2, Users, CreditCard, Bell } from 'lucide-react';
+import { Settings, Building2, Users, CreditCard, Bell, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/components/providers/CompanyProvider';
@@ -29,6 +29,12 @@ const settingsSections = [
     description: 'E-posta ve uygulama bildirimleri',
     icon: Bell,
     href: 'settings/notifications',
+  },
+  {
+    title: 'API Erişimi',
+    description: 'Harici API anahtarları ve erişim yönetimi',
+    icon: Key,
+    href: 'settings/api',
   },
 ];
 

@@ -19,6 +19,8 @@ import { RefundModule } from './modules/refund/refund.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { ExportModule } from './modules/export/export.module';
 import { ProductMappingModule } from './modules/product-mapping/product-mapping.module';
+import { ExternalApiModule } from './modules/external-api/external-api.module';
+import { StockSyncModule } from './modules/stock-sync/stock-sync.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -67,6 +69,8 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     PricingModule,
     ExportModule,
     ProductMappingModule,
+    ExternalApiModule,
+    StockSyncModule,
   ],
   providers: [
     // Global Exception Filter

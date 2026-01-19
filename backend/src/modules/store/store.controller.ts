@@ -122,6 +122,19 @@ export class StoreController {
     return this.storeService.syncStore(companyId, storeId, userId);
   }
 
+  @Post(':storeId/test-wcsc')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'WC Stock Connector bağlantısını test et' })
+  @ApiResponse({ status: 200, description: 'Test sonucu' })
+  async testWcscConnection(
+    @Param('companyId') companyId: string,
+    @Param('storeId') storeId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: { apiKey: string; apiSecret: string },
+  ) {
+    return this.storeService.testWcscConnection(companyId, storeId, userId, dto.apiKey, dto.apiSecret);
+  }
+
   @Post(':storeId/connect-wcsc')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'WC Stock Connector eklentisini bağla' })

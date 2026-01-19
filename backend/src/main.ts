@@ -44,13 +44,46 @@ async function bootstrap() {
   if (nodeEnv !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('WooCommerce Analytics API')
-      .setDescription('API documentation for WooCommerce Analytics Dashboard')
+      .setDescription(
+        `API documentation for WooCommerce Analytics Dashboard.
+
+## Authentication
+
+### Dashboard API (JWT)
+Dashboard endpoints use JWT Bearer authentication. Login via \`/api/auth/login\` to get a token.
+
+### External API (API Key)
+External API v1 endpoints (\`/api/v1/*\`) use API Key authentication.
+- Header: \`X-API-Key: wca_your_api_key\`
+- Or: \`Authorization: Bearer wca_your_api_key\`
+
+**Enterprise plan required for External API access.**
+
+## Rate Limiting
+External API has rate limiting: 100 requests per minute per API key.
+Rate limit headers are included in responses:
+- \`X-RateLimit-Limit\`: Maximum requests per window
+- \`X-RateLimit-Remaining\`: Remaining requests in current window
+- \`X-RateLimit-Reset\`: Unix timestamp when the window resets
+`,
+      )
       .setVersion('1.0')
       .addBearerAuth()
+      .addApiKey(
+        {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-API-Key',
+          description: 'API Key for External API (Enterprise plan required)',
+        },
+        'api-key',
+      )
       .addTag('Health', 'Health check endpoints')
       .addTag('Auth', 'Authentication endpoints')
       .addTag('Stores', 'Store management endpoints')
       .addTag('Analytics', 'Analytics endpoints')
+      .addTag('API Key Management', 'Manage API keys for External API access')
+      .addTag('External API v1', 'External API endpoints (requires API key)')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

@@ -9,6 +9,7 @@ import { useCompanyStore } from '@/stores/companyStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EditableStockCell, EditablePriceCell } from '@/components/inventory';
 import {
   ArrowLeft,
   ExternalLink,
@@ -23,6 +24,7 @@ import {
   DataTableHead,
   DataTableCell,
 } from '@/components/ui/data-table';
+import { toast } from 'sonner';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -36,6 +38,10 @@ export default function ProductDetailPage() {
     error,
     fetchProduct,
     clearSelectedProduct,
+    updateProductStock,
+    updateVariationStock,
+    updateProductPurchasePrice,
+    updateVariationPurchasePrice,
   } = useInventoryStore();
 
   useEffect(() => {
@@ -92,6 +98,42 @@ export default function ProductDetailPage() {
   const totalStock = hasVariations
     ? selectedProduct.variations.reduce((sum, v) => sum + v.stockQuantity, 0)
     : selectedProduct.stockQuantity;
+
+  // Stock update handler
+  const handleStockUpdate = async (newStock: number): Promise<boolean> => {
+    if (!currentCompany?.id) return false;
+    const success = await updateProductStock(currentCompany.id, productId, newStock);
+    if (success) {
+      toast.success('Stok güncellendi');
+    } else {
+      toast.error('Stok güncellenemedi');
+    }
+    return success;
+  };
+
+  // Variation stock update handler
+  const handleVariationStockUpdate = async (variationId: string, newStock: number): Promise<boolean> => {
+    if (!currentCompany?.id) return false;
+    const success = await updateVariationStock(currentCompany.id, variationId, newStock);
+    if (success) {
+      toast.success('Varyasyon stoğu güncellendi');
+    } else {
+      toast.error('Varyasyon stoğu güncellenemedi');
+    }
+    return success;
+  };
+
+  // Purchase price update handler
+  const handlePurchasePriceUpdate = async (newPrice: number): Promise<boolean> => {
+    if (!currentCompany?.id) return false;
+    const success = await updateProductPurchasePrice(currentCompany.id, productId, newPrice);
+    if (success) {
+      toast.success('Alış fiyatı güncellendi');
+    } else {
+      toast.error('Alış fiyatı güncellenemedi');
+    }
+    return success;
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -171,11 +213,14 @@ export default function ProductDetailPage() {
                   <span className="text-2xl font-semibold">
                     ₺{selectedProduct.price.toFixed(2)}
                   </span>
-                  {selectedProduct.purchasePrice && (
-                    <p className="text-sm text-muted-foreground">
-                      Maliyet: ₺{selectedProduct.purchasePrice.toFixed(2)}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 justify-end mt-1">
+                    <span className="text-sm text-muted-foreground">Maliyet:</span>
+                    <EditablePriceCell
+                      value={selectedProduct.purchasePrice}
+                      onSave={handlePurchasePriceUpdate}
+                      placeholder="Belirtilmedi"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -223,7 +268,11 @@ export default function ProductDetailPage() {
                         {getStockBadge(selectedProduct.stockQuantity)}
                       </DataTableCell>
                       <DataTableCell className="text-center pr-6">
-                        <span className="font-medium">{selectedProduct.stockQuantity}</span>
+                        <EditableStockCell
+                          value={selectedProduct.stockQuantity}
+                          onSave={handleStockUpdate}
+                          className="mx-auto"
+                        />
                       </DataTableCell>
                     </DataTableRow>
                   )}
@@ -246,7 +295,11 @@ export default function ProductDetailPage() {
                           {getStockBadge(variation.stockQuantity)}
                         </DataTableCell>
                         <DataTableCell className="text-center pr-6">
-                          <span className="font-medium">{variation.stockQuantity}</span>
+                          <EditableStockCell
+                            value={variation.stockQuantity}
+                            onSave={(newStock) => handleVariationStockUpdate(variation.id, newStock)}
+                            className="mx-auto"
+                          />
                         </DataTableCell>
                       </DataTableRow>
                     ))}
@@ -264,14 +317,14 @@ export default function ProductDetailPage() {
                   </p>
                 </div>
                 <div className="px-6 py-4 border-r">
-                  <p className="text-sm text-muted-foreground">Tahmini Gelir</p>
+                  <p className="text-sm text-muted-foreground">Satış Değeri</p>
                   <p className="text-xl font-semibold mt-1">
                     ₺{(selectedProduct.price * totalStock).toLocaleString('tr-TR')}
                   </p>
                 </div>
                 <div className="px-6 py-4">
-                  <p className="text-sm text-muted-foreground">Kar Marjı</p>
-                  <p className="text-xl font-semibold mt-1 text-green-600">
+                  <p className="text-sm text-muted-foreground">Brüt Kar</p>
+                  <p className={`text-xl font-semibold mt-1 ${(selectedProduct.price - selectedProduct.purchasePrice) * totalStock >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                     ₺{((selectedProduct.price - selectedProduct.purchasePrice) * totalStock).toLocaleString('tr-TR')}
                   </p>
                 </div>

@@ -11,109 +11,110 @@
 ---
 
 ## Kabul Kriterleri
-- [ ] RESTful API endpoints mevcut olmali
-- [ ] API key ile authentication yapilabilmeli
-- [ ] Rate limiting uygulanmali
-- [ ] API dokumantasyonu saglanmali
-- [ ] Sadece Enterprise kullanicilari erisebilmeli
+- [x] RESTful API endpoints mevcut olmali
+- [x] API key ile authentication yapilabilmeli
+- [x] Rate limiting uygulanmali
+- [x] API dokumantasyonu saglanmali
+- [x] Sadece Enterprise kullanicilari erisebilmeli
 
 ---
 
 ## Yapilacaklar
 
-### Aşama 1: Veritabani - API Key Yonetimi
-- [ ] 1.1. `api_keys` tablosu olustur
-  - id, user_id, key_hash, name, permissions_json, last_used_at, expires_at, is_active
-- [ ] 1.2. `api_usage_logs` tablosu olustur
-  - id, api_key_id, endpoint, method, status_code, response_time, created_at
-- [ ] 1.3. Index olusturma
+### Aşama 1: Veritabani - API Key Yonetimi ✅
+- [x] 1.1. `api_keys` tablosu olustur
+  - id, company_id, key_hash, key_prefix, name, permissions, last_used_at, expires_at, is_active
+- [x] 1.2. `api_usage_logs` tablosu olustur
+  - id, api_key_id, endpoint, method, status_code, response_time_ms, ip_address, user_agent, created_at
+- [x] 1.3. Index olusturma
 
-### Aşama 2: Backend - API Key Servisi
-- [ ] 2.1. `ApiKeyService` olustur
-- [ ] 2.2. API key olusturma (hash ile saklama)
-- [ ] 2.3. API key dogrulama
-- [ ] 2.4. API key iptal etme
-- [ ] 2.5. API key yenileme (rotation)
-- [ ] 2.6. Kullanim istatistikleri
+### Aşama 2: Backend - API Key Servisi ✅
+- [x] 2.1. `ApiKeyService` olustur
+- [x] 2.2. API key olusturma (SHA-256 hash ile saklama)
+- [x] 2.3. API key dogrulama
+- [x] 2.4. API key iptal etme (revoke)
+- [x] 2.5. API key yenileme (rotation)
+- [x] 2.6. Kullanim istatistikleri
 
-### Aşama 3: Backend - Authentication Middleware
-- [ ] 3.1. API key authentication middleware
-- [ ] 3.2. Bearer token veya X-API-Key header destegi
-- [ ] 3.3. Plan kontrolu (Enterprise only)
-- [ ] 3.4. Permission kontrolu
+### Aşama 3: Backend - Authentication Guard ✅
+- [x] 3.1. API key authentication guard
+- [x] 3.2. Bearer token veya X-API-Key header destegi
+- [x] 3.3. Plan kontrolu (Enterprise only)
+- [x] 3.4. Permission kontrolu (read/write)
 
-### Aşama 4: Backend - Rate Limiting
-- [ ] 4.1. Rate limiter middleware (express-rate-limit)
-- [ ] 4.2. Redis bazli rate limiting
-- [ ] 4.3. Limitler: 100 istek/dakika/API key
-- [ ] 4.4. Rate limit headers (X-RateLimit-*)
-- [ ] 4.5. 429 Too Many Requests response
+### Aşama 4: Backend - Rate Limiting ✅
+- [x] 4.1. Rate limiter guard
+- [x] 4.2. Redis bazli rate limiting
+- [x] 4.3. Limitler: 100 istek/dakika/API key
+- [x] 4.4. Rate limit headers (X-RateLimit-*)
+- [x] 4.5. 429 Too Many Requests response
 
-### Aşama 5: Backend - Public API Endpoints
-- [ ] 5.1. **Stores**
+### Aşama 5: Backend - Public API Endpoints ✅
+- [x] 5.1. **Stores**
   - `GET /api/v1/stores` - Magaza listesi
   - `GET /api/v1/stores/:id` - Magaza detayi
-- [ ] 5.2. **Products**
+- [x] 5.2. **Products**
   - `GET /api/v1/products` - Urun listesi
   - `GET /api/v1/products/:id` - Urun detayi
   - `GET /api/v1/products/critical-stock` - Kritik stok
-- [ ] 5.3. **Orders**
+- [x] 5.3. **Orders**
   - `GET /api/v1/orders` - Siparis listesi
   - `GET /api/v1/orders/:id` - Siparis detayi
-- [ ] 5.4. **Analytics**
+- [x] 5.4. **Analytics**
   - `GET /api/v1/analytics/overview` - Genel ozet
   - `GET /api/v1/analytics/sales` - Satis verileri
   - `GET /api/v1/analytics/inventory` - Stok verileri
   - `GET /api/v1/analytics/profit` - Kar verileri
 
-### Aşama 6: Backend - Response Formatlama
-- [ ] 6.1. Standart response yapisi
-- [ ] 6.2. Pagination destegi (limit, offset, cursor)
-- [ ] 6.3. Filtering destegi (query params)
-- [ ] 6.4. Sorting destegi
-- [ ] 6.5. Error response formati
+### Aşama 6: Backend - Response Formatlama ✅
+- [x] 6.1. Standart response yapisi (success, data, meta)
+- [x] 6.2. Pagination destegi (limit, offset, hasMore)
+- [x] 6.3. Filtering destegi (query params)
+- [x] 6.4. Sorting destegi
+- [x] 6.5. Error response formati (code, message, details)
 
-### Aşama 7: Backend - API Versioning
-- [ ] 7.1. URL bazli versioning (/api/v1/...)
-- [ ] 7.2. Version deprecation stratejisi
-- [ ] 7.3. Version header (X-API-Version)
+### Aşama 7: Backend - API Versioning ✅
+- [x] 7.1. URL bazli versioning (/api/v1/...)
+- [ ] 7.2. Version deprecation stratejisi (v2 icin)
+- [ ] 7.3. Version header (X-API-Version) (v2 icin)
 
-### Aşama 8: Backend - Logging ve Monitoring
-- [ ] 8.1. API isteklerini loglama
-- [ ] 8.2. Response time olcumu
-- [ ] 8.3. Error tracking
-- [ ] 8.4. Kullanim analizleri
+### Aşama 8: Backend - Logging ve Monitoring ✅
+- [x] 8.1. API isteklerini loglama (ApiLoggingInterceptor)
+- [x] 8.2. Response time olcumu
+- [x] 8.3. Error tracking
+- [x] 8.4. Kullanim analizleri (usage stats endpoint)
 
-### Aşama 9: Backend - API Key Yonetim Endpoints
-- [ ] 9.1. `POST /api/settings/api-keys` - Yeni key olustur
-- [ ] 9.2. `GET /api/settings/api-keys` - Key listesi
-- [ ] 9.3. `DELETE /api/settings/api-keys/:id` - Key sil
-- [ ] 9.4. `PUT /api/settings/api-keys/:id/rotate` - Key yenile
-- [ ] 9.5. `GET /api/settings/api-keys/:id/usage` - Kullanim istatistikleri
+### Aşama 9: Backend - API Key Yonetim Endpoints ✅
+- [x] 9.1. `POST /api/settings/api-keys` - Yeni key olustur
+- [x] 9.2. `GET /api/settings/api-keys` - Key listesi
+- [x] 9.3. `DELETE /api/settings/api-keys/:id` - Key sil
+- [x] 9.4. `PUT /api/settings/api-keys/:id/rotate` - Key yenile
+- [x] 9.5. `GET /api/settings/api-keys/:id/usage` - Kullanim istatistikleri
+- [x] 9.6. `PUT /api/settings/api-keys/:id/revoke` - Key iptal et
 
-### Aşama 10: Frontend - API Key Yonetim Sayfasi
-- [ ] 10.1. `/settings/api` sayfasi
-- [ ] 10.2. API key listesi tablosu
-- [ ] 10.3. "Yeni Key Olustur" butonu ve modal
-- [ ] 10.4. Key gosterim (sadece olusturulurken)
-- [ ] 10.5. Key iptal etme
-- [ ] 10.6. Kullanim istatistikleri grafigi
+### Aşama 10: Frontend - API Key Yonetim Sayfasi ✅
+- [x] 10.1. `/settings/api` sayfasi
+- [x] 10.2. API key listesi tablosu
+- [x] 10.3. "Yeni Key Olustur" butonu ve modal
+- [x] 10.4. Key gosterim (sadece olusturulurken)
+- [x] 10.5. Key iptal etme / silme
+- [ ] 10.6. Kullanim istatistikleri grafigi (ileride)
 
-### Aşama 11: Dokumantasyon
-- [ ] 11.1. OpenAPI/Swagger spesifikasyonu
-- [ ] 11.2. Swagger UI entegrasyonu (/api/docs)
-- [ ] 11.3. Endpoint aciklamalari
-- [ ] 11.4. Request/Response ornekleri
-- [ ] 11.5. Authentication rehberi
-- [ ] 11.6. Rate limiting aciklamasi
-- [ ] 11.7. Error kodlari listesi
+### Aşama 11: Dokumantasyon ✅
+- [x] 11.1. OpenAPI/Swagger spesifikasyonu
+- [x] 11.2. Swagger UI entegrasyonu (/api/docs)
+- [x] 11.3. Endpoint aciklamalari
+- [x] 11.4. Request/Response ornekleri (Swagger)
+- [x] 11.5. Authentication rehberi (main.ts description)
+- [x] 11.6. Rate limiting aciklamasi
+- [ ] 11.7. Error kodlari listesi (ayri dokuman - ileride)
 
-### Aşama 12: Test
-- [ ] 12.1. API endpoint testleri
-- [ ] 12.2. Authentication testleri
-- [ ] 12.3. Rate limiting testleri
-- [ ] 12.4. Permission testleri
-- [ ] 12.5. Load testing
+### Aşama 12: Test ✅
+- [x] 12.1. API key service unit testleri (22 test)
+- [x] 12.2. Authentication testleri
+- [ ] 12.3. Rate limiting testleri (e2e - ileride)
+- [x] 12.4. Permission testleri
+- [ ] 12.5. Load testing (ileride)
 
 ### Aşama 13: WC Stock Connector WordPress Eklentisi Entegrasyonu
 

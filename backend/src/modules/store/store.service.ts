@@ -190,7 +190,16 @@ export class StoreService implements OnModuleInit {
         currency: true,
         commissionRate: true,
         shippingCost: true,
+        hasWcscPlugin: true,
+        wcscLastSyncAt: true,
         createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -216,6 +225,8 @@ export class StoreService implements OnModuleInit {
         currency: true,
         commissionRate: true,
         shippingCost: true,
+        hasWcscPlugin: true,
+        wcscLastSyncAt: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -794,6 +805,42 @@ export class StoreService implements OnModuleInit {
   /**
    * WC Stock Connector eklentisini bağla
    */
+  /**
+   * WCSC bağlantısını test et (kaydetmeden)
+   */
+  async testWcscConnection(
+    companyId: string,
+    storeId: string,
+    userId: string,
+    apiKey: string,
+    apiSecret: string,
+  ) {
+    await this.checkCompanyAccess(companyId, userId);
+
+    const store = await this.prisma.store.findFirst({
+      where: { id: storeId, companyId },
+    });
+
+    if (!store) {
+      throw new NotFoundException('Mağaza bulunamadı');
+    }
+
+    // WCSC bağlantısını test et
+    const wcscClient = new WCSCClient({
+      url: store.url,
+      apiKey,
+      apiSecret,
+    });
+
+    const verifyResult = await wcscClient.verify();
+
+    return {
+      success: verifyResult.success,
+      error: verifyResult.error,
+      data: verifyResult.data,
+    };
+  }
+
   async connectWcscPlugin(
     companyId: string,
     storeId: string,

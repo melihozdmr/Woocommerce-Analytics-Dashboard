@@ -48,6 +48,12 @@ class WC_Stock_Connector {
         // Ürün listesine alış fiyatı kolonu
         add_filter('manage_edit-product_columns', array($this, 'add_purchase_price_column'));
         add_action('manage_product_posts_custom_column', array($this, 'display_purchase_price_column'), 10, 2);
+
+        // Stok değişikliği webhook'ları
+        add_action('woocommerce_product_set_stock', array($this, 'on_stock_change'), 10, 1);
+        add_action('woocommerce_variation_set_stock', array($this, 'on_variation_stock_change'), 10, 1);
+        add_action('woocommerce_order_status_completed', array($this, 'on_order_completed'), 10, 1);
+        add_action('woocommerce_order_status_processing', array($this, 'on_order_processing'), 10, 1);
     }
 
     public function add_admin_menu() {
@@ -64,11 +70,17 @@ class WC_Stock_Connector {
     public function register_settings() {
         register_setting('wc_stock_connector', 'wcsc_api_key');
         register_setting('wc_stock_connector', 'wcsc_api_secret');
+        register_setting('wc_stock_connector', 'wcsc_dashboard_url');
+        register_setting('wc_stock_connector', 'wcsc_webhook_enabled');
+        register_setting('wc_stock_connector', 'wcsc_webhook_secret');
     }
 
     public function admin_page() {
         $api_key = get_option('wcsc_api_key');
         $api_secret = get_option('wcsc_api_secret');
+        $dashboard_url = get_option('wcsc_dashboard_url', '');
+        $webhook_enabled = get_option('wcsc_webhook_enabled', '0');
+        $webhook_secret = get_option('wcsc_webhook_secret', '');
 
         // İlk kurulumda API anahtarları oluştur
         if (empty($api_key)) {
@@ -79,6 +91,10 @@ class WC_Stock_Connector {
             $api_secret = wp_generate_password(48, false);
             update_option('wcsc_api_secret', $api_secret);
         }
+        if (empty($webhook_secret)) {
+            $webhook_secret = wp_generate_password(64, false);
+            update_option('wcsc_webhook_secret', $webhook_secret);
+        }
 
         // Anahtar yenileme
         if (isset($_POST['regenerate_keys']) && wp_verify_nonce($_POST['_wpnonce'], 'wcsc_regenerate')) {
@@ -87,6 +103,25 @@ class WC_Stock_Connector {
             update_option('wcsc_api_key', $api_key);
             update_option('wcsc_api_secret', $api_secret);
             echo '<div class="updated"><p>API anahtarları yenilendi!</p></div>';
+        }
+
+        // Webhook ayarları kaydetme
+        if (isset($_POST['save_webhook_settings']) && wp_verify_nonce($_POST['_wpnonce'], 'wcsc_webhook_settings')) {
+            $dashboard_url = sanitize_url($_POST['wcsc_dashboard_url']);
+            $webhook_enabled = isset($_POST['wcsc_webhook_enabled']) ? '1' : '0';
+            update_option('wcsc_dashboard_url', $dashboard_url);
+            update_option('wcsc_webhook_enabled', $webhook_enabled);
+            echo '<div class="updated"><p>Webhook ayarları kaydedildi!</p></div>';
+        }
+
+        // Webhook testi
+        if (isset($_POST['test_webhook']) && wp_verify_nonce($_POST['_wpnonce'], 'wcsc_test_webhook')) {
+            $test_result = $this->send_test_webhook();
+            if ($test_result['success']) {
+                echo '<div class="updated"><p>Webhook testi başarılı!</p></div>';
+            } else {
+                echo '<div class="error"><p>Webhook testi başarısız: ' . esc_html($test_result['error']) . '</p></div>';
+            }
         }
         ?>
         <div class="wrap">
@@ -159,6 +194,56 @@ class WC_Stock_Connector {
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="card" style="max-width: 700px; padding: 20px; margin-top: 20px;">
+                <h2>Webhook Ayarları</h2>
+                <p>Stok değişikliklerini otomatik olarak dashboard'a bildirmek için webhook'u etkinleştirin.</p>
+
+                <form method="post">
+                    <?php wp_nonce_field('wcsc_webhook_settings'); ?>
+                    <table class="form-table">
+                        <tr>
+                            <th>Dashboard URL</th>
+                            <td>
+                                <input type="url" name="wcsc_dashboard_url" class="regular-text"
+                                       value="<?php echo esc_attr($dashboard_url); ?>"
+                                       placeholder="https://dashboard.example.com" style="width: 100%;">
+                                <p class="description">Stok yönetim panelinizin URL'si (örn: https://app.siteniz.com)</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Webhook Secret</th>
+                            <td>
+                                <input type="text" class="regular-text" value="<?php echo esc_attr($webhook_secret); ?>" readonly onclick="this.select();" style="width: 100%;">
+                                <p class="description">Bu secret'ı dashboard'daki mağaza ayarlarına girin.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Webhook Durumu</th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="wcsc_webhook_enabled" value="1" <?php checked($webhook_enabled, '1'); ?>>
+                                    Stok değişikliklerinde webhook gönder
+                                </label>
+                                <p class="description">Etkinleştirildiğinde, stok değişiklikleri anında dashboard'a bildirilir.</p>
+                            </td>
+                        </tr>
+                    </table>
+                    <p class="submit">
+                        <button type="submit" name="save_webhook_settings" class="button button-primary">Ayarları Kaydet</button>
+                    </p>
+                </form>
+
+                <?php if ($webhook_enabled === '1' && !empty($dashboard_url)): ?>
+                <hr style="margin: 20px 0;">
+                <h3>Webhook Testi</h3>
+                <p>Dashboard'a test webhook'u göndererek bağlantıyı doğrulayın.</p>
+                <form method="post" style="margin-top: 10px;">
+                    <?php wp_nonce_field('wcsc_test_webhook'); ?>
+                    <button type="submit" name="test_webhook" class="button">Test Webhook Gönder</button>
+                </form>
+                <?php endif; ?>
             </div>
 
             <div class="card" style="max-width: 700px; padding: 20px; margin-top: 20px;">
@@ -491,6 +576,250 @@ class WC_Stock_Connector {
             'name' => $product->get_name(),
             'purchase_price' => (float) $purchase_price,
         );
+    }
+
+    // === WEBHOOK GÖNDERİMİ ===
+
+    /**
+     * Basit ürün stok değişikliğinde webhook gönder
+     */
+    public function on_stock_change($product) {
+        if (!$this->is_webhook_enabled()) {
+            return;
+        }
+
+        // Varyasyon ise bu hook'u atla (variation hook kullanılacak)
+        if ($product->is_type('variation')) {
+            return;
+        }
+
+        $this->send_webhook('stock.updated', array(
+            'product_id' => $product->get_id(),
+            'sku' => $product->get_sku(),
+            'stock_quantity' => $product->get_stock_quantity(),
+            'stock_status' => $product->get_stock_status(),
+            'purchase_price' => (float) get_post_meta($product->get_id(), '_purchase_price', true),
+        ));
+    }
+
+    /**
+     * Varyasyon stok değişikliğinde webhook gönder
+     */
+    public function on_variation_stock_change($variation) {
+        if (!$this->is_webhook_enabled()) {
+            return;
+        }
+
+        $parent_id = $variation->get_parent_id();
+
+        $this->send_webhook('stock.updated', array(
+            'product_id' => $parent_id,
+            'variation_id' => $variation->get_id(),
+            'sku' => $variation->get_sku(),
+            'stock_quantity' => $variation->get_stock_quantity(),
+            'stock_status' => $variation->get_stock_status(),
+            'purchase_price' => (float) get_post_meta($variation->get_id(), '_purchase_price', true),
+        ));
+    }
+
+    /**
+     * Sipariş tamamlandığında webhook gönder
+     */
+    public function on_order_completed($order_id) {
+        if (!$this->is_webhook_enabled()) {
+            return;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+
+        $items = array();
+        foreach ($order->get_items() as $item) {
+            $product = $item->get_product();
+            if (!$product) continue;
+
+            $items[] = array(
+                'product_id' => $product->is_type('variation') ? $product->get_parent_id() : $product->get_id(),
+                'variation_id' => $product->is_type('variation') ? $product->get_id() : null,
+                'sku' => $product->get_sku(),
+                'quantity' => $item->get_quantity(),
+                'stock_quantity' => $product->get_stock_quantity(),
+                'stock_status' => $product->get_stock_status(),
+            );
+        }
+
+        $this->send_webhook('order.completed', array(
+            'order_id' => $order_id,
+            'order_status' => $order->get_status(),
+            'items' => $items,
+        ));
+    }
+
+    /**
+     * Sipariş işleme alındığında webhook gönder
+     */
+    public function on_order_processing($order_id) {
+        if (!$this->is_webhook_enabled()) {
+            return;
+        }
+
+        $order = wc_get_order($order_id);
+        if (!$order) {
+            return;
+        }
+
+        $items = array();
+        foreach ($order->get_items() as $item) {
+            $product = $item->get_product();
+            if (!$product) continue;
+
+            $items[] = array(
+                'product_id' => $product->is_type('variation') ? $product->get_parent_id() : $product->get_id(),
+                'variation_id' => $product->is_type('variation') ? $product->get_id() : null,
+                'sku' => $product->get_sku(),
+                'quantity' => $item->get_quantity(),
+                'stock_quantity' => $product->get_stock_quantity(),
+                'stock_status' => $product->get_stock_status(),
+            );
+        }
+
+        $this->send_webhook('order.processing', array(
+            'order_id' => $order_id,
+            'order_status' => $order->get_status(),
+            'items' => $items,
+        ));
+    }
+
+    /**
+     * Webhook gönder
+     */
+    private function send_webhook($event, $data) {
+        $dashboard_url = get_option('wcsc_dashboard_url');
+        $webhook_secret = get_option('wcsc_webhook_secret');
+
+        if (empty($dashboard_url) || empty($webhook_secret)) {
+            error_log('WCSC: Webhook gönderilemedi - Dashboard URL veya secret eksik');
+            return false;
+        }
+
+        // Webhook endpoint
+        $webhook_url = rtrim($dashboard_url, '/') . '/api/webhook/stock-sync';
+
+        // Payload oluştur
+        $timestamp = gmdate('c');
+        $payload = array(
+            'event' => $event,
+            'store_url' => get_site_url(),
+            'timestamp' => $timestamp,
+            'data' => $data,
+        );
+
+        $payload_json = json_encode($payload);
+
+        // HMAC-SHA256 signature oluştur
+        $signature = hash_hmac('sha256', $payload_json, $webhook_secret);
+        $payload['signature'] = $signature;
+
+        // HTTP isteği gönder
+        $response = wp_remote_post($webhook_url, array(
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'X-WCSC-Signature' => $signature,
+                'X-WCSC-Event' => $event,
+            ),
+            'body' => json_encode($payload),
+            'timeout' => 15,
+            'sslverify' => true,
+        ));
+
+        if (is_wp_error($response)) {
+            error_log('WCSC Webhook Error: ' . $response->get_error_message());
+            return false;
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+
+        if ($status_code !== 200) {
+            error_log('WCSC Webhook Error: HTTP ' . $status_code . ' - ' . wp_remote_retrieve_body($response));
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Test webhook gönder
+     */
+    public function send_test_webhook() {
+        $dashboard_url = get_option('wcsc_dashboard_url');
+        $webhook_secret = get_option('wcsc_webhook_secret');
+
+        if (empty($dashboard_url)) {
+            return array('success' => false, 'error' => 'Dashboard URL ayarlanmamış');
+        }
+
+        if (empty($webhook_secret)) {
+            return array('success' => false, 'error' => 'Webhook secret ayarlanmamış');
+        }
+
+        // Webhook endpoint
+        $webhook_url = rtrim($dashboard_url, '/') . '/api/webhook/stock-sync';
+
+        // Test payload
+        $timestamp = gmdate('c');
+        $payload = array(
+            'event' => 'test',
+            'store_url' => get_site_url(),
+            'timestamp' => $timestamp,
+            'data' => array(
+                'message' => 'Test webhook from WC Stock Connector',
+                'site_name' => get_bloginfo('name'),
+                'products_count' => wp_count_posts('product')->publish,
+            ),
+        );
+
+        $payload_json = json_encode($payload);
+
+        // HMAC-SHA256 signature
+        $signature = hash_hmac('sha256', $payload_json, $webhook_secret);
+        $payload['signature'] = $signature;
+
+        // HTTP isteği
+        $response = wp_remote_post($webhook_url, array(
+            'headers' => array(
+                'Content-Type' => 'application/json',
+                'X-WCSC-Signature' => $signature,
+                'X-WCSC-Event' => 'test',
+            ),
+            'body' => json_encode($payload),
+            'timeout' => 15,
+            'sslverify' => true,
+        ));
+
+        if (is_wp_error($response)) {
+            return array('success' => false, 'error' => $response->get_error_message());
+        }
+
+        $status_code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($status_code === 200) {
+            return array('success' => true, 'response' => $body);
+        }
+
+        return array(
+            'success' => false,
+            'error' => 'HTTP ' . $status_code . ': ' . ($body['message'] ?? 'Unknown error'),
+        );
+    }
+
+    /**
+     * Webhook etkin mi kontrol et
+     */
+    private function is_webhook_enabled() {
+        return get_option('wcsc_webhook_enabled') === '1' && !empty(get_option('wcsc_dashboard_url'));
     }
 }
 

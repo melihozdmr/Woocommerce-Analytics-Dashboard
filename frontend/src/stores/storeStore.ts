@@ -18,6 +18,11 @@ export interface MarketplaceStore {
   currency: string;
   commissionRate: number;
   shippingCost: number;
+  // WCSC Plugin fields
+  hasWcscPlugin: boolean;
+  wcscApiKey: string | null;
+  wcscApiSecret: string | null;
+  wcscLastSyncAt: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -42,6 +47,7 @@ interface StoreState {
   updateStore: (companyId: string, storeId: string, data: Partial<MarketplaceStore>) => Promise<MarketplaceStore>;
   deleteStore: (companyId: string, storeId: string) => Promise<void>;
   testConnection: (companyId: string, storeId: string) => Promise<{ success: boolean; error?: string }>;
+  testWcscConnection: (companyId: string, storeId: string, apiKey: string, apiSecret: string) => Promise<{ success: boolean; error?: string; data?: any }>;
   syncStore: (companyId: string, storeId: string) => Promise<{ success: boolean; message: string; started: boolean }>;
 }
 
@@ -125,6 +131,21 @@ export const useStoreStore = create<StoreState>((set, get) => ({
       return {
         success: false,
         error: error.response?.data?.message || 'Bağlantı testi başarısız',
+      };
+    }
+  },
+
+  testWcscConnection: async (companyId: string, storeId: string, apiKey: string, apiSecret: string) => {
+    try {
+      const response = await api.post(`/company/${companyId}/stores/${storeId}/test-wcsc`, {
+        apiKey,
+        apiSecret,
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'WCSC bağlantı testi başarısız',
       };
     }
   },

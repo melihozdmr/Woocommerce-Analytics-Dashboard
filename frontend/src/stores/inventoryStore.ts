@@ -4,7 +4,7 @@ import { api } from '@/services/api';
 export interface InventorySummary {
   totalStock: number;
   totalStockValue: number;
-  estimatedRevenue: number;
+  netProfit: number;
   criticalStockCount: number;
   outOfStockCount: number;
   productsWithoutPurchasePrice: number;
@@ -16,7 +16,7 @@ export interface StoreInventory {
   storeName: string;
   totalStock: number;
   totalStockValue: number;
-  estimatedRevenue: number;
+  netProfit: number;
   criticalStockCount: number;
   productCount: number;
 }
@@ -145,6 +145,9 @@ interface InventoryState {
   fetchProduct: (companyId: string, productId: string) => Promise<void>;
   updateProductStock: (companyId: string, productId: string, stockQuantity: number) => Promise<boolean>;
   updateVariationStock: (companyId: string, variationId: string, stockQuantity: number) => Promise<boolean>;
+  updateProductPurchasePrice: (companyId: string, productId: string, purchasePrice: number) => Promise<boolean>;
+  updateVariationPurchasePrice: (companyId: string, variationId: string, purchasePrice: number) => Promise<boolean>;
+  updateProductInList: (productId: string, updates: Partial<Product>) => void;
   setCriticalThreshold: (threshold: number) => void;
   clearSelectedProduct: () => void;
 }
@@ -322,5 +325,80 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       });
       return false;
     }
+  },
+
+  updateProductPurchasePrice: async (companyId: string, productId: string, purchasePrice: number) => {
+    set({ isUpdating: true, error: null });
+    try {
+      await api.patch(`/company/${companyId}/inventory/products/${productId}/purchase-price`, {
+        purchasePrice,
+      });
+      // Update local state
+      const { selectedProduct, products } = get();
+      if (selectedProduct && selectedProduct.id === productId) {
+        set({
+          selectedProduct: {
+            ...selectedProduct,
+            purchasePrice,
+          },
+          isUpdating: false,
+        });
+      }
+      // Also update in products list
+      set({
+        products: products.map((p) =>
+          p.id === productId ? { ...p, purchasePrice } : p
+        ),
+        isUpdating: false,
+      });
+      return true;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Alış fiyatı güncellenemedi',
+        isUpdating: false,
+      });
+      return false;
+    }
+  },
+
+  updateVariationPurchasePrice: async (companyId: string, variationId: string, purchasePrice: number) => {
+    set({ isUpdating: true, error: null });
+    try {
+      await api.patch(`/company/${companyId}/inventory/variations/${variationId}/purchase-price`, {
+        purchasePrice,
+      });
+      // Update local state
+      const { selectedProduct } = get();
+      if (selectedProduct) {
+        const updatedVariations = selectedProduct.variations.map((v) =>
+          v.id === variationId ? { ...v, purchasePrice } : v
+        );
+        set({
+          selectedProduct: {
+            ...selectedProduct,
+            variations: updatedVariations,
+          },
+          isUpdating: false,
+        });
+      } else {
+        set({ isUpdating: false });
+      }
+      return true;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Varyasyon alış fiyatı güncellenemedi',
+        isUpdating: false,
+      });
+      return false;
+    }
+  },
+
+  updateProductInList: (productId: string, updates: Partial<Product>) => {
+    const { products } = get();
+    set({
+      products: products.map((p) =>
+        p.id === productId ? { ...p, ...updates } : p
+      ),
+    });
   },
 }));
