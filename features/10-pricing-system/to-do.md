@@ -208,4 +208,4 @@ INSERT INTO settings (key, value) VALUES ('pricing_enabled', 'false');
 - [x] Testler basarili geciyor (`npm run test`)
 - [x] Clean code kurallarina uygun
 - [x] Dokumantasyon guncellendi
-- [ ] Git commit atildi
+- [x] Git commit atildi
