@@ -102,7 +102,7 @@ function formatCurrency(num: number): string {
 
 export default function DashboardPage() {
   const { currentCompany } = useCompanyStore();
-  const { stores, fetchStores } = useStoreStore();
+  const { stores, fetchStores, isLoading: isStoresLoading } = useStoreStore();
   const { summary, isLoading, fetchSummary } = useInventoryStore();
   const {
     summary: profitSummary,
@@ -125,7 +125,8 @@ export default function DashboardPage() {
     }
   }, [currentCompany?.id, fetchStores, fetchSummary, fetchProfitSummary, fetchRefundSummary]);
 
-  const hasStores = stores.length > 0;
+  // Don't show "no stores" alert while loading or before company/stores are loaded
+  const hasStores = !currentCompany?.id || isStoresLoading || stores.length > 0;
 
   const stats = [
     {

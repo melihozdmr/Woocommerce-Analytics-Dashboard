@@ -193,6 +193,7 @@ export default function PricingPage() {
     plans,
     myPlan,
     usage,
+    isLoading: isMyPlanLoading,
     isPlansLoading,
     fetchPlans,
     fetchMyPlan,
@@ -270,7 +271,7 @@ export default function PricingPage() {
 
       {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 border-b">
-        {isPlansLoading ? (
+        {isPlansLoading || isMyPlanLoading ? (
           <>
             <PlanSkeleton />
             <PlanSkeleton />
