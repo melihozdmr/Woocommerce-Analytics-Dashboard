@@ -44,16 +44,44 @@ function DashboardLoadingSkeleton() {
   return (
     <div className="flex h-screen w-full bg-sidebar">
       {/* Sidebar skeleton */}
-      <div className="hidden md:flex w-64 flex-col p-4 space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <div className="space-y-2">
-          {[...Array(7)].map((_, i) => (
-            <Skeleton key={i} className="h-9 w-full" />
+      <div className="hidden md:flex w-64 flex-col p-2">
+        {/* Team switcher */}
+        <div className="p-2">
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
+        {/* Nav items */}
+        <div className="flex-1 p-2 space-y-1">
+          {[...Array(9)].map((_, i) => (
+            <Skeleton key={i} className="h-9 w-full rounded-md" />
           ))}
         </div>
+        {/* User */}
+        <div className="p-2">
+          <Skeleton className="h-12 w-full rounded-lg" />
+        </div>
       </div>
-      {/* Main content skeleton */}
-      <div className="flex-1 m-2 ml-0 rounded-xl border bg-background" />
+      {/* Main content skeleton - matches SidebarInset */}
+      <main className="relative flex w-full flex-1 flex-col bg-background md:m-2 md:ml-0 md:rounded-xl md:border">
+        {/* Header */}
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <Skeleton className="h-7 w-7 rounded-md" />
+          <Skeleton className="h-4 w-px" />
+          <Skeleton className="h-4 w-32" />
+        </header>
+        {/* Stats row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 border-b">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className={`p-4 ${i < 3 ? 'border-r' : ''}`}>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          ))}
+        </div>
+        {/* Content area */}
+        <div className="flex-1 p-4">
+          <Skeleton className="h-48 w-full rounded-lg" />
+        </div>
+      </main>
     </div>
   );
 }
