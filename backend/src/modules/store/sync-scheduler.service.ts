@@ -11,6 +11,29 @@ export class SyncSchedulerService {
   private readonly logger = new Logger(SyncSchedulerService.name);
   private readonly encryptionKey: string;
 
+  /**
+   * WooCommerce meta_data'dan alış fiyatını çıkar
+   * _purchase_price veya _cost gibi yaygın meta field'lerini kontrol eder
+   */
+  private extractPurchasePrice(metaData?: Array<{ key: string; value: string }>): number | null {
+    if (!metaData || metaData.length === 0) return null;
+
+    // Yaygın alış fiyatı meta key'leri
+    const purchasePriceKeys = ['_purchase_price', '_cost', '_wc_cog_cost', '_alg_wc_cog_cost'];
+
+    for (const key of purchasePriceKeys) {
+      const meta = metaData.find((m) => m.key === key);
+      if (meta && meta.value) {
+        const price = parseFloat(meta.value);
+        if (!isNaN(price) && price > 0) {
+          return price;
+        }
+      }
+    }
+
+    return null;
+  }
+
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
@@ -65,6 +88,11 @@ export class SyncSchedulerService {
       let variationsCount = 0;
 
       for (const product of products) {
+        // Alış fiyatını meta_data'dan çıkar
+        const purchasePrice = this.extractPurchasePrice(product.meta_data);
+        // İlk görseli al
+        const imageUrl = product.images && product.images.length > 0 ? product.images[0].src : null;
+
         const savedProduct = await this.prisma.product.upsert({
           where: {
             storeId_wcProductId: {
@@ -75,8 +103,10 @@ export class SyncSchedulerService {
           update: {
             name: product.name,
             sku: product.sku || null,
+            imageUrl: imageUrl,
             productType: product.type || 'simple',
             price: parseFloat(product.price) || 0,
+            purchasePrice: purchasePrice,
             stockQuantity: product.stock_quantity || 0,
             stockStatus: product.stock_status,
             manageStock: product.manage_stock || false,
@@ -88,8 +118,10 @@ export class SyncSchedulerService {
             wcProductId: product.id,
             name: product.name,
             sku: product.sku || null,
+            imageUrl: imageUrl,
             productType: product.type || 'simple',
             price: parseFloat(product.price) || 0,
+            purchasePrice: purchasePrice,
             stockQuantity: product.stock_quantity || 0,
             stockStatus: product.stock_status,
             manageStock: product.manage_stock || false,

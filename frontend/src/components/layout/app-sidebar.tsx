@@ -60,13 +60,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Store,
     },
     {
-      title: 'Stok',
+      title: 'Stoklar',
       url: `/${companySlug}/inventory`,
       icon: Package,
-      items: [
-        { title: 'Ürünler', url: `/${companySlug}/inventory` },
-        { title: 'Kategoriler', url: `/${companySlug}/inventory/categories` },
-      ],
     },
     {
       title: 'Siparişler',

@@ -18,31 +18,10 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useStoreStore } from '@/stores/storeStore';
-
-const stats = [
-  {
-    name: 'Toplam Stok',
-    value: '-',
-    icon: Package,
-  },
-  {
-    name: 'Bugünün Satışı',
-    value: '-',
-    icon: ShoppingCart,
-  },
-  {
-    name: 'Toplam Kâr',
-    value: '-',
-    icon: TrendingUp,
-  },
-  {
-    name: 'Kritik Stok',
-    value: '-',
-    icon: AlertTriangle,
-  },
-];
+import { useInventoryStore } from '@/stores/inventoryStore';
 
 // Sample chart data
 const salesChartData = [
@@ -101,25 +80,69 @@ function SetupAlert() {
   );
 }
 
+function formatNumber(num: number): string {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K';
+  }
+  return num.toLocaleString('tr-TR');
+}
+
+function formatCurrency(num: number): string {
+  return num.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' TL';
+}
+
 export default function DashboardPage() {
   const { currentCompany } = useCompanyStore();
   const { stores, fetchStores } = useStoreStore();
+  const { summary, isLoading, fetchSummary } = useInventoryStore();
 
-  // Fetch stores on mount
+  // Fetch stores and inventory on mount
   useEffect(() => {
     if (currentCompany?.id) {
       fetchStores(currentCompany.id);
+      fetchSummary(currentCompany.id);
     }
-  }, [currentCompany?.id, fetchStores]);
+  }, [currentCompany?.id, fetchStores, fetchSummary]);
 
   const hasStores = stores.length > 0;
+
+  const stats = [
+    {
+      name: 'Toplam Stok',
+      value: summary ? formatNumber(summary.totalStock) : '-',
+      icon: Package,
+      loading: isLoading,
+    },
+    {
+      name: 'Stok Değeri',
+      value: summary ? formatCurrency(summary.totalStockValue) : '-',
+      icon: ShoppingCart,
+      loading: isLoading,
+    },
+    {
+      name: 'Tahmini Gelir',
+      value: summary ? formatCurrency(summary.estimatedRevenue) : '-',
+      icon: TrendingUp,
+      loading: isLoading,
+    },
+    {
+      name: 'Kritik Stok',
+      value: summary ? String(summary.criticalStockCount) : '-',
+      icon: AlertTriangle,
+      loading: isLoading,
+      alert: summary && summary.criticalStockCount > 0,
+    },
+  ];
 
   return (
     <>
       {/* Setup Alert - show only if no store connected */}
       {!hasStores && <SetupAlert />}
 
-      {/* Stats Grid - Empty State */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <div
@@ -130,10 +153,16 @@ export default function DashboardPage() {
               <span className="text-sm font-medium text-muted-foreground">
                 {stat.name}
               </span>
-              <stat.icon className="h-5 w-5 text-muted-foreground" />
+              <stat.icon className={`h-5 w-5 ${stat.alert ? 'text-orange-500' : 'text-muted-foreground'}`} />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-muted-foreground">{stat.value}</span>
+              {stat.loading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <span className={`text-2xl font-bold ${stat.alert ? 'text-orange-500' : hasStores ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {stat.value}
+                </span>
+              )}
             </div>
           </div>
         ))}

@@ -19,6 +19,15 @@ export interface WooCommerceProduct {
   manage_stock: boolean;
   status: string;
   variations?: number[]; // IDs of variations for variable products
+  images?: Array<{
+    id: number;
+    src: string;
+  }>;
+  meta_data?: Array<{
+    id: number;
+    key: string;
+    value: string;
+  }>;
 }
 
 export interface WooCommerceVariation {
@@ -259,6 +268,95 @@ export class WooCommerceClient {
     } catch (error) {
       console.error(`Error fetching variations for product ${productId}:`, error);
       return [];
+    }
+  }
+
+  /**
+   * Ürün stok miktarını güncelle
+   */
+  async updateProductStock(productId: number, stockQuantity: number): Promise<WooCommerceProduct> {
+    try {
+      const response = await this.client.put(`/products/${productId}`, {
+        stock_quantity: stockQuantity,
+        manage_stock: true,
+      });
+      return response.data;
+    } catch (error) {
+      // Basic Auth başarısız olursa query string auth dene
+      const axiosError = error as AxiosError;
+      if (axiosError.response?.status === 401) {
+        const response = await this.client.put(
+          `/products/${productId}`,
+          {
+            stock_quantity: stockQuantity,
+            manage_stock: true,
+          },
+          {
+            params: {
+              consumer_key: this.config.consumerKey,
+              consumer_secret: this.config.consumerSecret,
+            },
+            auth: undefined,
+          }
+        );
+        return response.data;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Varyasyon stok miktarını güncelle
+   */
+  async updateVariationStock(productId: number, variationId: number, stockQuantity: number): Promise<WooCommerceVariation> {
+    console.log('Updating variation stock:', { productId, variationId, stockQuantity });
+    console.log('Using URL:', this.config.url);
+    console.log('Consumer Key starts with:', this.config.consumerKey.substring(0, 10));
+
+    try {
+      const response = await this.client.put(`/products/${productId}/variations/${variationId}`, {
+        stock_quantity: stockQuantity,
+        manage_stock: true,
+      });
+      return response.data;
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      console.error('WooCommerce update error:', {
+        status: axiosError.response?.status,
+        statusText: axiosError.response?.statusText,
+        data: axiosError.response?.data,
+        headers: axiosError.response?.headers,
+      });
+
+      // Basic Auth başarısız olursa query string auth dene
+      if (axiosError.response?.status === 401) {
+        console.log('Trying query string auth...');
+        try {
+          const response = await this.client.put(
+            `/products/${productId}/variations/${variationId}`,
+            {
+              stock_quantity: stockQuantity,
+              manage_stock: true,
+            },
+            {
+              params: {
+                consumer_key: this.config.consumerKey,
+                consumer_secret: this.config.consumerSecret,
+              },
+              auth: undefined,
+            }
+          );
+          return response.data;
+        } catch (retryError) {
+          const retryAxiosError = retryError as AxiosError;
+          console.error('Query string auth also failed:', {
+            status: retryAxiosError.response?.status,
+            data: retryAxiosError.response?.data,
+          });
+          throw retryError;
+        }
+      }
+      throw error;
     }
   }
 }

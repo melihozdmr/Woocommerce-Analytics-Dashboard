@@ -15,25 +15,25 @@ Farkli zaman dilimlerinde siparis verilerini goruntuleme, satis trendlerini anal
 ## Yapilacaklar
 
 ### Backend - Order Sync
-- [ ] Orders tablosu olustur (Prisma)
+- [x] Orders tablosu olustur (Prisma)
 - [ ] Order items tablosu olustur
-- [ ] WooCommerce'den siparisleri cek
-- [ ] Siparis durumlari: completed, processing, pending, cancelled, refunded
-- [ ] Sync job scheduler
+- [x] WooCommerce'den siparisleri cek
+- [x] Siparis durumlari: completed, processing, pending, cancelled, refunded
+- [x] Sync job scheduler
 
 ### Backend - Order Endpoints
-- [ ] GET /orders/summary - Siparis ozeti (period parametresi ile)
-- [ ] GET /orders/trend - Siparis trendi (line chart data)
-- [ ] GET /orders/distribution - Magaza dagilimi (pie chart data)
-- [ ] GET /orders/recent - Son siparisler listesi
-- [ ] GET /orders/status-breakdown - Durum dagilimi
+- [x] GET /orders/summary - Siparis ozeti (period parametresi ile)
+- [x] GET /orders/trend - Siparis trendi (line chart data)
+- [x] GET /orders/store-distribution - Magaza dagilimi (pie chart data)
+- [x] GET /orders/recent - Son siparisler listesi
+- [x] GET /orders/status-breakdown - Durum dagilimi
 
 ### Backend - Calculations
-- [ ] Toplam siparis sayisi (period bazli)
-- [ ] Toplam siparis tutari
-- [ ] Ortalama siparis degeri (AOV)
-- [ ] Period-over-period karsilastirma (%)
-- [ ] Gunluk/Haftalik granularity
+- [x] Toplam siparis sayisi (period bazli)
+- [x] Toplam siparis tutari
+- [x] Ortalama siparis degeri (AOV)
+- [x] Period-over-period karsilastirma (%)
+- [x] Gunluk/Haftalik granularity
 
 ### Backend - Caching
 - [ ] Redis'te siparis aggregations cache'le
@@ -41,52 +41,52 @@ Farkli zaman dilimlerinde siparis verilerini goruntuleme, satis trendlerini anal
 - [ ] Cache invalidation on sync
 
 ### Frontend - Order Analytics Dashboard
-- [ ] Zaman filtresi
-  - [ ] Bugun
-  - [ ] Son 7 gun
-  - [ ] Son 30 gun
-  - [ ] Son 365 gun
-  - [ ] Ozel tarih araligi (date picker)
-- [ ] KPI Kartlari
-  - [ ] Toplam Siparis Sayisi
-  - [ ] Toplam Siparis Tutari (TL)
-  - [ ] Ortalama Siparis Degeri
-  - [ ] Period-over-period degisim (%)
+- [x] Zaman filtresi
+  - [x] Bugun
+  - [x] Son 7 gun
+  - [x] Son 30 gun
+  - [x] Son 365 gun
+  - [x] Ozel tarih araligi (date picker)
+- [x] KPI Kartlari
+  - [x] Toplam Siparis Sayisi
+  - [x] Toplam Siparis Tutari (TL)
+  - [x] Ortalama Siparis Degeri
+  - [x] Period-over-period degisim (%)
 
 ### Frontend - Charts
-- [ ] Siparis Trendi (Line Chart)
-  - [ ] <30 gun: gunluk granularity
-  - [ ] >30 gun: haftalik granularity
+- [x] Siparis Trendi (Line Chart)
+  - [x] <30 gun: gunluk granularity
+  - [x] >30 gun: haftalik granularity
   - [ ] Veri noktasina tikla -> detay goster
-- [ ] Magaza Dagilimi (Pie Chart)
-  - [ ] Magazalara gore siparis dagilimi
-  - [ ] Tutar ve yuzde gosterimi
-- [ ] Durum Dagilimi (Bar Chart)
-  - [ ] completed, processing, pending, cancelled
+- [x] Magaza Dagilimi (Pie Chart)
+  - [x] Magazalara gore siparis dagilimi
+  - [x] Tutar ve yuzde gosterimi
+- [x] Durum Dagilimi (Bar Chart)
+  - [x] completed, processing, pending, cancelled
 
 ### Frontend - Recent Orders
-- [ ] Son 20 siparis listesi
-- [ ] Kolonlar: Siparis No, Tarih, Musteri, Tutar, Durum, Magaza
-- [ ] Siparisa tikla -> detay modal
+- [x] Son 20 siparis listesi
+- [x] Kolonlar: Siparis No, Tarih, Musteri, Tutar, Durum, Magaza
+- [x] Siparisa tikla -> detay modal
 
 ### Frontend - Loading States
-- [ ] Skeleton loader for KPIs
-- [ ] Chart loading spinner
-- [ ] Table loading skeleton
+- [x] Skeleton loader for KPIs
+- [x] Chart loading spinner
+- [x] Table loading skeleton
 
 ---
 
 ## Kabul Kriterleri
-- [ ] AC-005.1: Zaman filtresi calisir (Bugun, 7 gun, 30 gun, 365 gun, Ozel)
-- [ ] AC-005.2: Toplam siparis sayisi dogru gosterilir
-- [ ] AC-005.3: Toplam siparis tutari TL ile binlik ayirici gosterilir
-- [ ] AC-005.4: Ortalama siparis degeri hesaplanir ve gosterilir
-- [ ] AC-005.5: Magaza dagilimi pie chart'ta gosterilir
-- [ ] AC-005.6: Siparis trendi line chart'ta gosterilir (gunluk/haftalik)
-- [ ] AC-005.7: Period-over-period karsilastirma yuzde olarak gosterilir (+12%)
-- [ ] AC-005.8: Siparis durum dagilimi gosterilir
+- [x] AC-005.1: Zaman filtresi calisir (Bugun, 7 gun, 30 gun, 365 gun, Ozel)
+- [x] AC-005.2: Toplam siparis sayisi dogru gosterilir
+- [x] AC-005.3: Toplam siparis tutari TL ile binlik ayirici gosterilir
+- [x] AC-005.4: Ortalama siparis degeri hesaplanir ve gosterilir
+- [x] AC-005.5: Magaza dagilimi pie chart'ta gosterilir
+- [x] AC-005.6: Siparis trendi line chart'ta gosterilir (gunluk/haftalik)
+- [x] AC-005.7: Period-over-period karsilastirma yuzde olarak gosterilir (+12%)
+- [x] AC-005.8: Siparis durum dagilimi gosterilir
 - [ ] AC-005.9: Chart veri noktasina tiklaninca detay gosterilir
-- [ ] AC-005.10: Veriler yuklenirken loading skeleton gosterilir
+- [x] AC-005.10: Veriler yuklenirken loading skeleton gosterilir
 
 ---
 
