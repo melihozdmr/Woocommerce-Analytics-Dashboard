@@ -116,50 +116,16 @@
 - [ ] 12.5. Load testing
 
 ### Aşama 13: WC Stock Connector WordPress Eklentisi Entegrasyonu
-> **Not:** Eklenti temel yapısı `wordpress-plugin/wc-stock-connector.php` dosyasında hazır. Bu aşamada API ile otomatik eşleşme yapılacak.
 
-- [ ] 13.1. **Eklenti Tarafı - Otomatik Bağlantı**
-  - [ ] Kullanıcı API key girince otomatik store eşleştirme
-  - [ ] Site URL'i ile mağaza eşleştirme
-  - [ ] Bağlantı durumu göstergesi (bağlı/bağlı değil)
-  - [ ] Hata mesajları ve troubleshooting
-
-- [ ] 13.2. **Backend - Eklenti Bağlantı Endpoint'leri**
-  - [ ] `POST /api/v1/wcsc/register` - Eklenti ilk bağlantı kaydı
-  - [ ] `POST /api/v1/wcsc/verify` - Bağlantı doğrulama
-  - [ ] `GET /api/v1/wcsc/status` - Bağlantı durumu kontrolü
-
-- [ ] 13.3. **Backend - Stok Yönetimi Endpoint'leri**
-  - [ ] `POST /api/v1/wcsc/stock/update` - Tekli stok güncelle
-  - [ ] `POST /api/v1/wcsc/stock/bulk-update` - Toplu stok güncelle
-  - [ ] `GET /api/v1/wcsc/stock/:productId` - Stok bilgisi al
-
-- [ ] 13.4. **Backend - Alış Fiyatı Endpoint'leri**
-  - [ ] `POST /api/v1/wcsc/purchase-price/update` - Tekli alış fiyatı güncelle
-  - [ ] `POST /api/v1/wcsc/purchase-price/bulk-update` - Toplu alış fiyatı güncelle
-  - [ ] `GET /api/v1/wcsc/purchase-price/:productId` - Alış fiyatı al
-
-- [ ] 13.5. **Eklenti Tarafı - Webhook Dinleme**
-  - [ ] Dashboard'dan gelen stok güncelleme isteklerini işle
-  - [ ] Dashboard'dan gelen alış fiyatı güncelleme isteklerini işle
-  - [ ] İşlem logları ve hata yönetimi
-
-- [ ] 13.6. **Frontend - Eklenti Bağlantı Yönetimi**
-  - [ ] Mağaza ayarlarında "WC Stock Connector" bölümü
-  - [ ] API key gösterme/kopyalama
-  - [ ] Bağlantı durumu göstergesi
-  - [ ] Eklenti kurulum rehberi modal
-
-- [ ] 13.7. **Frontend - Stok ve Alış Fiyatı Düzenleme**
-  - [ ] Ürün listesinde inline stok düzenleme
-  - [ ] Ürün listesinde inline alış fiyatı düzenleme
-  - [ ] Toplu düzenleme seçimi ve modal
-  - [ ] Değişikliklerin WooCommerce'e otomatik sync'i
-
-- [ ] 13.8. **Eklenti Dağıtımı**
-  - [ ] WordPress.org için hazırlık (readme.txt, assets)
-  - [ ] Versiyon yönetimi
-  - [ ] Otomatik güncelleme desteği
+> **Bu aşama ayrı bir feature olarak taşındı.**
+>
+> Detaylar için bkz: [Feature 15 - WordPress Stock Sync](../15-wordpress-stock-sync/to-do.md)
+>
+> Bu feature şunları kapsar:
+> - WordPress eklentisi (WC Stock Connector)
+> - Dashboard ↔ WooCommerce stok/fiyat senkronizasyonu
+> - Site A ↔ Site B çapraz stok senkronizasyonu
+> - Webhook yönetimi
 
 ---
 

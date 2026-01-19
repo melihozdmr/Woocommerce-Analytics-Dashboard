@@ -72,6 +72,23 @@ export interface ProductVariation {
   attributeString: string | null;
 }
 
+export interface ProductMappingStore {
+  storeId: string;
+  storeName: string;
+  storeUrl: string;
+  productId: string;
+  wcProductId: number;
+  isSource: boolean;
+  stockQuantity: number;
+}
+
+export interface ProductMappingInfo {
+  id: string;
+  masterSku: string;
+  name: string | null;
+  stores: ProductMappingStore[];
+}
+
 export interface ProductDetail {
   id: string;
   name: string;
@@ -92,6 +109,7 @@ export interface ProductDetail {
     url: string;
   };
   variations: ProductVariation[];
+  mapping: ProductMappingInfo | null;
 }
 
 interface InventoryState {
@@ -121,6 +139,7 @@ interface InventoryState {
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
       stockStatus?: 'instock' | 'outofstock' | 'critical';
+      mappingStatus?: 'mapped' | 'unmapped';
     }
   ) => Promise<void>;
   fetchProduct: (companyId: string, productId: string) => Promise<void>;
@@ -197,6 +216,8 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       if (options.search) params.append('search', options.search);
       if (options.sortBy) params.append('sortBy', options.sortBy);
       if (options.sortOrder) params.append('sortOrder', options.sortOrder);
+      if (options.stockStatus) params.append('stockStatus', options.stockStatus);
+      if (options.mappingStatus) params.append('mappingStatus', options.mappingStatus);
 
       const response = await api.get<ProductsResponse>(
         `/company/${companyId}/inventory/products?${params.toString()}`

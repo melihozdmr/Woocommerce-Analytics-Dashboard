@@ -80,9 +80,11 @@ model Company {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  members     CompanyMember[]
-  stores      Store[]
-  currentUsers User[] @relation("CurrentCompany")
+  members                    CompanyMember[]
+  stores                     Store[]
+  currentUsers               User[] @relation("CurrentCompany")
+  productMappings            ProductMapping[]
+  dismissedMappingSuggestions DismissedMappingSuggestion[]
 
   @@map("companies")
 }
@@ -151,10 +153,11 @@ model Store {
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
   // Relations
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  analyticsCache AnalyticsCache[]
-  products       Product[]
-  orders         Order[]
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  analyticsCache      AnalyticsCache[]
+  products            Product[]
+  orders              Order[]
+  productMappingItems ProductMappingItem[]
 
   @@map("stores")
 }
@@ -178,9 +181,10 @@ model Product {
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  store      Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  variations ProductVariation[]
-  orderItems OrderItem[]
+  store               Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variations          ProductVariation[]
+  orderItems          OrderItem[]
+  productMappingItems ProductMappingItem[]
 
   @@unique([storeId, wcProductId])
   @@map("products")
@@ -336,4 +340,59 @@ model StoreSettingsLog {
   @@index([storeId])
   @@index([userId])
   @@map("store_settings_logs")
+}
+
+// ==================== PRODUCT MAPPING ====================
+
+model ProductMapping {
+  id          String   @id @default(cuid())
+  companyId   String   @map("company_id")
+  masterSku   String   @map("master_sku")
+  name        String?  // Optional display name for the group
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items   ProductMappingItem[]
+
+  @@unique([companyId, masterSku])
+  @@index([companyId])
+  @@map("product_mappings")
+}
+
+model ProductMappingItem {
+  id          String   @id @default(cuid())
+  mappingId   String   @map("mapping_id")
+  storeId     String   @map("store_id")
+  productId   String   @map("product_id")
+  sku         String?
+  isSource    Boolean  @default(false) @map("is_source") // Kaynak mağaza mı?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  mapping ProductMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+  store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([mappingId, storeId, productId])
+  @@index([mappingId])
+  @@index([storeId])
+  @@index([productId])
+  @@map("product_mapping_items")
+}
+
+// Reddedilen eşleştirme önerileri
+model DismissedMappingSuggestion {
+  id          String   @id @default(cuid())
+  companyId   String   @map("company_id")
+  suggestionKey String @map("suggestion_key") // SKU veya normalleştirilmiş ürün adı
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, suggestionKey])
+  @@index([companyId])
+  @@map("dismissed_mapping_suggestions")
 }

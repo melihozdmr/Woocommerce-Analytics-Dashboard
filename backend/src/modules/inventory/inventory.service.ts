@@ -64,37 +64,80 @@ export class InventoryService {
       };
     }
 
-    // Get products aggregate
+    // Get all products with variations
     const products = await this.prisma.product.findMany({
       where: {
         storeId: { in: storeIds },
         isActive: true,
       },
       select: {
+        id: true,
         stockQuantity: true,
         price: true,
         purchasePrice: true,
         productType: true,
-      },
-    });
-
-    // Get variations aggregate (for variable products)
-    const variations = await this.prisma.productVariation.findMany({
-      where: {
-        product: {
-          storeId: { in: storeIds },
-          isActive: true,
-          productType: 'variable',
+        variations: {
+          where: { isActive: true },
+          select: { stockQuantity: true, price: true, purchasePrice: true },
         },
-        isActive: true,
-      },
-      select: {
-        stockQuantity: true,
-        price: true,
       },
     });
 
-    // Calculate totals
+    // Get all mappings for this company to identify mapped products
+    const mappings = await this.prisma.productMapping.findMany({
+      where: { companyId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                stockQuantity: true,
+                price: true,
+                purchasePrice: true,
+                productType: true,
+                variations: {
+                  where: { isActive: true },
+                  select: { stockQuantity: true, price: true },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'asc' }, // İlk eklenen kaynak
+        },
+      },
+    });
+
+    // Create a map of productId -> mappingId and source product info
+    const productToMappingId = new Map<string, string>();
+    const mappingSourceStock = new Map<string, { stock: number; price: number; purchasePrice: number }>();
+
+    for (const mapping of mappings) {
+      // İlk item kaynak (source)
+      const sourceItem = mapping.items.find((i) => i.isSource) || mapping.items[0];
+      if (sourceItem) {
+        let sourceStock = sourceItem.product.stockQuantity;
+        let sourcePrice = Number(sourceItem.product.price);
+        const sourcePurchasePrice = sourceItem.product.purchasePrice ? Number(sourceItem.product.purchasePrice) : 0;
+
+        if (sourceItem.product.productType === 'variable' && sourceItem.product.variations.length > 0) {
+          sourceStock = sourceItem.product.variations.reduce((sum, v) => sum + v.stockQuantity, 0);
+          sourcePrice = sourceItem.product.variations.reduce((sum, v) => sum + Number(v.price), 0) / sourceItem.product.variations.length;
+        }
+
+        mappingSourceStock.set(mapping.id, {
+          stock: sourceStock,
+          price: sourcePrice,
+          purchasePrice: sourcePurchasePrice,
+        });
+      }
+
+      for (const item of mapping.items) {
+        productToMappingId.set(item.productId, mapping.id);
+      }
+    }
+
+    // Calculate totals - for mapped products, use source stock only (not combined)
     let totalStock = 0;
     let totalStockValue = 0;
     let estimatedRevenue = 0;
@@ -102,35 +145,54 @@ export class InventoryService {
     let outOfStockCount = 0;
     let productsWithoutPurchasePrice = 0;
 
-    // Process simple products
+    const processedMappings = new Set<string>();
+
     for (const product of products) {
-      if (product.productType === 'simple') {
-        const qty = product.stockQuantity;
-        const price = Number(product.price);
-        const purchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
+      // Calculate effective stock for this product (including variations)
+      let effectiveStock: number;
+      let effectivePrice: number;
+      let effectivePurchasePrice: number;
 
-        totalStock += qty;
-        totalStockValue += purchasePrice * qty;
-        estimatedRevenue += price * qty;
-
-        if (qty === 0) outOfStockCount++;
-        else if (qty <= criticalThreshold) criticalStockCount++;
-
-        if (!product.purchasePrice) productsWithoutPurchasePrice++;
+      if (product.productType === 'variable' && product.variations.length > 0) {
+        effectiveStock = product.variations.reduce((sum, v) => sum + v.stockQuantity, 0);
+        // Use average price from variations
+        effectivePrice = product.variations.reduce((sum, v) => sum + Number(v.price), 0) / product.variations.length;
+        effectivePurchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
+      } else {
+        effectiveStock = product.stockQuantity;
+        effectivePrice = Number(product.price);
+        effectivePurchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
       }
-    }
 
-    // Process variations
-    for (const variation of variations) {
-      const qty = variation.stockQuantity;
-      const price = Number(variation.price);
+      const mappingId = productToMappingId.get(product.id);
 
-      totalStock += qty;
-      estimatedRevenue += price * qty;
-      // Note: variations don't have purchase price, use parent product's
+      if (mappingId) {
+        // This product is part of a mapping
+        if (processedMappings.has(mappingId)) {
+          // Already processed this mapping, skip entirely (same physical product in multiple sites)
+          continue;
+        }
+        processedMappings.add(mappingId);
 
-      if (qty === 0) outOfStockCount++;
-      else if (qty <= criticalThreshold) criticalStockCount++;
+        // Use source stock for this mapping (gerçek stok)
+        const sourceInfo = mappingSourceStock.get(mappingId);
+        if (sourceInfo) {
+          effectiveStock = sourceInfo.stock;
+          effectivePrice = sourceInfo.price;
+          effectivePurchasePrice = sourceInfo.purchasePrice;
+        }
+      }
+
+      // Add to totals
+      totalStock += effectiveStock;
+      totalStockValue += effectivePurchasePrice * effectiveStock;
+      estimatedRevenue += effectivePrice * effectiveStock;
+
+      // Count critical/out of stock
+      if (effectiveStock === 0) outOfStockCount++;
+      else if (effectiveStock <= criticalThreshold) criticalStockCount++;
+
+      if (!product.purchasePrice) productsWithoutPurchasePrice++;
     }
 
     // Get last sync time
@@ -325,10 +387,12 @@ export class InventoryService {
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
       stockStatus?: 'instock' | 'outofstock' | 'critical';
+      mappingStatus?: 'mapped' | 'unmapped';
       criticalThreshold?: number;
+      consolidateMappings?: boolean;
     } = {},
   ) {
-    const { page = 1, limit = 20, storeId, search, sortBy = 'name', sortOrder = 'asc', stockStatus, criticalThreshold = 5 } = options;
+    const { page = 1, limit = 20, storeId, search, sortBy = 'name', sortOrder = 'asc', stockStatus, mappingStatus, criticalThreshold = 5, consolidateMappings = true } = options;
 
     const stores = await this.prisma.store.findMany({
       where: {
@@ -357,6 +421,15 @@ export class InventoryService {
         ],
       }),
     };
+
+    // Filter by mapping status
+    if (mappingStatus) {
+      if (mappingStatus === 'mapped') {
+        baseWhere.productMappingItems = { some: {} };
+      } else if (mappingStatus === 'unmapped') {
+        baseWhere.productMappingItems = { none: {} };
+      }
+    }
 
     // For stock filtering, we need to handle variable products differently
     // Variable products' stock is in variations, simple products' stock is in the product itself
@@ -434,30 +507,139 @@ export class InventoryService {
       this.prisma.product.count({ where: baseWhere }),
     ]);
 
-    return {
-      products: products.map((p) => {
-        // Calculate effective stock quantity
-        const effectiveStock = p.productType === 'variable' && p.variations.length > 0
-          ? p.variations.reduce((sum, v) => sum + v.stockQuantity, 0)
-          : p.stockQuantity;
+    // Map products with effective stock calculation
+    const mappedProducts = products.map((p) => {
+      const effectiveStock = p.productType === 'variable' && p.variations.length > 0
+        ? p.variations.reduce((sum, v) => sum + v.stockQuantity, 0)
+        : p.stockQuantity;
 
-        return {
-          id: p.id,
-          name: p.name,
-          sku: p.sku,
-          imageUrl: p.imageUrl,
-          productType: p.productType,
-          stockQuantity: effectiveStock,
-          price: Number(p.price),
-          purchasePrice: p.purchasePrice ? Number(p.purchasePrice) : null,
-          storeId: p.storeId,
-          wcProductId: p.wcProductId,
-          syncedAt: p.syncedAt,
-          isActive: p.isActive,
-          storeName: storeMap.get(p.storeId) || '',
-          variationCount: p._count.variations,
-        };
-      }),
+      return {
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        imageUrl: p.imageUrl,
+        productType: p.productType,
+        stockQuantity: effectiveStock,
+        price: Number(p.price),
+        purchasePrice: p.purchasePrice ? Number(p.purchasePrice) : null,
+        storeId: p.storeId,
+        wcProductId: p.wcProductId,
+        syncedAt: p.syncedAt,
+        isActive: p.isActive,
+        storeName: storeMap.get(p.storeId) || '',
+        variationCount: p._count.variations,
+        mappingId: null as string | null,
+        isMapped: false,
+        mappedStoreCount: 0,
+        totalMappedStock: 0,
+      };
+    });
+
+    // If consolidation is enabled, merge mapped products
+    if (consolidateMappings) {
+      // Get all mappings for this company
+      const mappings = await this.prisma.productMappingItem.findMany({
+        where: {
+          mapping: { companyId },
+          productId: { in: mappedProducts.map((p) => p.id) },
+        },
+        include: {
+          mapping: {
+            include: {
+              items: {
+                include: {
+                  product: {
+                    include: {
+                      variations: { select: { stockQuantity: true } },
+                    },
+                  },
+                },
+                orderBy: { createdAt: 'asc' }, // İlk eklenen kaynak
+              },
+            },
+          },
+        },
+      });
+
+      // Create a map of productId -> mapping info
+      const productToMapping = new Map<string, { mappingId: string; masterSku: string; allProductIds: string[] }>();
+
+      for (const item of mappings) {
+        const allProductIds = item.mapping.items.map((i) => i.productId);
+        productToMapping.set(item.productId, {
+          mappingId: item.mappingId,
+          masterSku: item.mapping.masterSku,
+          allProductIds,
+        });
+      }
+
+      // Consolidate mapped products
+      const consolidatedProducts: typeof mappedProducts = [];
+      const seenMappings = new Set<string>();
+
+      for (const product of mappedProducts) {
+        const mappingInfo = productToMapping.get(product.id);
+
+        if (mappingInfo) {
+          // This product is part of a mapping
+          if (seenMappings.has(mappingInfo.mappingId)) {
+            // Skip - we already added this mapping's representative
+            continue;
+          }
+
+          seenMappings.add(mappingInfo.mappingId);
+
+          // Find the mapping item to get source stock (gerçek stok)
+          const mappingItem = mappings.find((m) => m.mappingId === mappingInfo.mappingId);
+          if (mappingItem) {
+            const storeNames: string[] = [];
+
+            // Find source item (isSource = true or first item)
+            const sourceItem = mappingItem.mapping.items.find((i) => i.isSource) || mappingItem.mapping.items[0];
+            let realStock = 0;
+
+            if (sourceItem) {
+              realStock = sourceItem.product.stockQuantity;
+              if (sourceItem.product.variations && sourceItem.product.variations.length > 0) {
+                realStock = sourceItem.product.variations.reduce((sum, v) => sum + v.stockQuantity, 0);
+              }
+            }
+
+            // Collect store names
+            for (const mi of mappingItem.mapping.items) {
+              const storeName = storeMap.get(mi.storeId);
+              if (storeName && !storeNames.includes(storeName)) {
+                storeNames.push(storeName);
+              }
+            }
+
+            consolidatedProducts.push({
+              ...product,
+              mappingId: mappingInfo.mappingId,
+              isMapped: true,
+              mappedStoreCount: mappingItem.mapping.items.length,
+              totalMappedStock: realStock, // Gerçek stok = kaynak sitenin stoğu
+              stockQuantity: realStock,
+              storeName: storeNames.join(', '),
+            });
+          }
+        } else {
+          // Not mapped, add as-is
+          consolidatedProducts.push(product);
+        }
+      }
+
+      return {
+        products: consolidatedProducts,
+        total: total - (mappedProducts.length - consolidatedProducts.length),
+        page,
+        limit,
+        totalPages: Math.ceil((total - (mappedProducts.length - consolidatedProducts.length)) / limit),
+      };
+    }
+
+    return {
+      products: mappedProducts,
       total,
       page,
       limit,
@@ -497,11 +679,67 @@ export class InventoryService {
           },
           orderBy: { attributeString: 'asc' },
         },
+        productMappingItems: {
+          include: {
+            mapping: {
+              include: {
+                items: {
+                  include: {
+                    store: {
+                      select: {
+                        id: true,
+                        name: true,
+                        url: true,
+                      },
+                    },
+                    product: {
+                      select: {
+                        id: true,
+                        wcProductId: true,
+                        stockQuantity: true,
+                        variations: {
+                          select: { stockQuantity: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     if (!product) {
       return null;
+    }
+
+    // Build mapping info if product is mapped
+    let mapping = null;
+    if (product.productMappingItems.length > 0) {
+      const mappingData = product.productMappingItems[0].mapping;
+      mapping = {
+        id: mappingData.id,
+        masterSku: mappingData.masterSku,
+        name: mappingData.name,
+        stores: mappingData.items.map((item) => {
+          // Calculate stock including variations
+          let stock = item.product.stockQuantity;
+          if (item.product.variations && item.product.variations.length > 0) {
+            stock = item.product.variations.reduce((sum, v) => sum + v.stockQuantity, 0);
+          }
+          return {
+            storeId: item.store.id,
+            storeName: item.store.name,
+            storeUrl: item.store.url,
+            productId: item.product.id,
+            wcProductId: item.product.wcProductId,
+            isSource: item.isSource,
+            stockQuantity: stock,
+          };
+        }),
+      };
     }
 
     return {
@@ -533,6 +771,7 @@ export class InventoryService {
         attributes: v.attributes,
         attributeString: v.attributeString,
       })),
+      mapping,
     };
   }
 

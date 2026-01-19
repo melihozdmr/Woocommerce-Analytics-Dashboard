@@ -309,29 +309,71 @@ export default function ProductDetailPage() {
             {/* Store Section */}
             <div className="border-b">
               <div className="px-6 py-3">
-                <h3 className="font-medium">Mağaza</h3>
+                <h3 className="font-medium">
+                  {selectedProduct.mapping ? 'Eşleşen Mağazalar' : 'Mağaza'}
+                </h3>
               </div>
-              <div className="px-6 pb-4 space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Mağaza Adı</p>
-                  <p className="text-sm font-medium">{selectedProduct.store.name}</p>
+              {selectedProduct.mapping ? (
+                <div className="px-6 pb-4 space-y-4">
+                  {selectedProduct.mapping.stores.map((store, index) => (
+                    <div
+                      key={store.storeId}
+                      className={`${index > 0 ? 'pt-4 border-t' : ''}`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="text-sm font-medium">{store.storeName}</p>
+                        {store.isSource && (
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">Kaynak</Badge>
+                        )}
+                      </div>
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="flex justify-between">
+                          <span>Stok:</span>
+                          <span className="font-medium text-foreground">{store.stockQuantity} adet</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>WC ID:</span>
+                          <span className="font-mono">#{store.wcProductId}</span>
+                        </div>
+                        <a
+                          href={store.storeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline block truncate"
+                        >
+                          {store.storeUrl}
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t">
+                    <p className="text-xs text-muted-foreground">Eşleştirme SKU</p>
+                    <p className="text-sm font-mono">{selectedProduct.mapping.masterSku}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">URL</p>
-                  <a
-                    href={selectedProduct.store.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {selectedProduct.store.url}
-                  </a>
+              ) : (
+                <div className="px-6 pb-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Mağaza Adı</p>
+                    <p className="text-sm font-medium">{selectedProduct.store.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">URL</p>
+                    <a
+                      href={selectedProduct.store.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {selectedProduct.store.url}
+                    </a>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">WooCommerce ID</p>
+                    <p className="text-sm font-mono">#{selectedProduct.wcProductId}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">WooCommerce ID</p>
-                  <p className="text-sm font-mono">#{selectedProduct.wcProductId}</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Sync Section */}

@@ -38,6 +38,7 @@ import { useInventoryStore } from '@/stores/inventoryStore';
 import { cn } from '@/lib/utils';
 
 type StockFilter = 'all' | 'instock' | 'critical' | 'outofstock';
+type MappingFilter = 'all' | 'mapped' | 'unmapped';
 type SortField = 'name' | 'stockQuantity' | 'price';
 type SortOrder = 'asc' | 'desc';
 
@@ -58,16 +59,26 @@ export default function InventoryPage() {
   } = useInventoryStore();
 
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
+  const [mappingFilter, setMappingFilter] = useState<MappingFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  // Fetch summary on mount
+  // Fetch summary on mount and auto-refresh every 60 seconds
   useEffect(() => {
     if (currentCompany?.id) {
       fetchSummary(currentCompany.id);
     }
+
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(() => {
+      if (currentCompany?.id) {
+        fetchSummary(currentCompany.id);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [currentCompany?.id, fetchSummary]);
 
   const fetchData = useCallback(() => {
@@ -91,6 +102,10 @@ export default function InventoryPage() {
       filters.search = searchQuery;
     }
 
+    if (mappingFilter !== 'all') {
+      filters.mappingStatus = mappingFilter;
+    }
+
     fetchProducts(currentCompany.id, {
       page: 1,
       limit: 20,
@@ -98,10 +113,17 @@ export default function InventoryPage() {
       sortOrder: sortOrder,
       ...filters,
     });
-  }, [currentCompany?.id, stockFilter, selectedStoreId, searchQuery, sortField, sortOrder, fetchProducts]);
+  }, [currentCompany?.id, stockFilter, mappingFilter, selectedStoreId, searchQuery, sortField, sortOrder, fetchProducts]);
 
   useEffect(() => {
     fetchData();
+
+    // Auto-refresh products every 60 seconds
+    const interval = setInterval(() => {
+      fetchData();
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   const handlePageChange = (page: number) => {
@@ -113,6 +135,7 @@ export default function InventoryPage() {
     else if (stockFilter === 'instock') filters.stockStatus = 'instock';
     if (selectedStoreId !== 'all') filters.storeId = selectedStoreId;
     if (searchQuery) filters.search = searchQuery;
+    if (mappingFilter !== 'all') filters.mappingStatus = mappingFilter;
 
     fetchProducts(currentCompany.id, {
       page,
@@ -266,6 +289,18 @@ export default function InventoryPage() {
                   {store.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          {/* Mapping Filter Dropdown */}
+          <Select value={mappingFilter} onValueChange={(v) => setMappingFilter(v as MappingFilter)}>
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Eşleştirme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tüm Ürünler</SelectItem>
+              <SelectItem value="mapped">Eşleştirilmiş</SelectItem>
+              <SelectItem value="unmapped">Eşleştirilmemiş</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -53,6 +53,7 @@ export class InventoryController {
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     @Query('stockStatus') stockStatus?: 'instock' | 'outofstock' | 'critical',
+    @Query('mappingStatus') mappingStatus?: 'mapped' | 'unmapped',
     @Query('criticalThreshold') criticalThreshold?: string,
   ) {
     return this.inventoryService.getProducts(companyId, {
@@ -63,6 +64,7 @@ export class InventoryController {
       sortBy,
       sortOrder,
       stockStatus,
+      mappingStatus,
       criticalThreshold: criticalThreshold ? parseInt(criticalThreshold, 10) : 5,
     });
   }

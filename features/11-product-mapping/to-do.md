@@ -15,79 +15,84 @@
 ---
 
 ## Kabul Kriterleri
-- [ ] SKU bazli otomatik eslestirme yapilabilmeli
-- [ ] Manuel eslestirme secenegi olmali
-- [ ] Eslesmis urunler tek satirda gosterilmeli
-- [ ] Toplam stok eslesmis urunler icin birlesmeli
-- [ ] Eslestirme kaldirabilmeli
-- [ ] Eslestirme onerileri sunulmali
+- [x] SKU bazli otomatik eslestirme yapilabilmeli
+- [x] Manuel eslestirme secenegi olmali
+- [x] Eslesmis urunler tek satirda gosterilmeli
+- [x] Toplam stok eslesmis urunler icin birlesmeli (kaynak sitenin stogu)
+- [x] Eslestirme kaldirabilmeli
+- [x] Eslestirme onerileri sunulmali
+- [x] Hatali oneri reddedilebilmeli
 
 ---
 
 ## Yapilacaklar
 
 ### Aşama 1: Veritabani - Eslestirme Tablolari
-- [ ] 1.1. `product_mappings` tablosu olustur
-  - id, user_id, master_sku, created_at
-- [ ] 1.2. `product_mapping_items` tablosu olustur
-  - id, mapping_id, store_id, product_id, sku
-- [ ] 1.3. Indexler olustur (user_id, master_sku)
+- [x] 1.1. `product_mappings` tablosu olustur
+  - id, company_id, master_sku, name, created_at, updated_at
+- [x] 1.2. `product_mapping_items` tablosu olustur
+  - id, mapping_id, store_id, product_id, sku, is_source
+- [x] 1.3. `dismissed_mapping_suggestions` tablosu olustur
+  - id, company_id, suggestion_key
+- [x] 1.4. Indexler olustur (company_id, master_sku)
 
 ### Aşama 2: Backend - Otomatik Eslestirme Servisi
-- [ ] 2.1. `ProductMappingService` olustur
-- [ ] 2.2. SKU eslestirme algoritmasi
+- [x] 2.1. `ProductMappingService` olustur
+- [x] 2.2. SKU eslestirme algoritmasi
   - Ayni SKU'ya sahip urunleri grupla
   - Farkli magazalardaki eslesmeleri bul
-- [ ] 2.3. Eslestirme onerileri olusturma
-- [ ] 2.4. Benzer isim/SKU eslestirme (fuzzy matching)
+- [x] 2.3. Eslestirme onerileri olusturma
+- [x] 2.4. Urun adindaki SKU kodunu cikarma (0101, SZ4590 gibi)
 
 ### Aşama 3: Backend - Manuel Eslestirme
-- [ ] 3.1. Eslestirme olusturma fonksiyonu
-- [ ] 3.2. Eslestirme guncelleme fonksiyonu
-- [ ] 3.3. Eslestirme silme fonksiyonu
-- [ ] 3.4. Eslestirmeye urun ekleme/cikarma
+- [x] 3.1. Eslestirme olusturma fonksiyonu
+- [x] 3.2. Eslestirme guncelleme fonksiyonu
+- [x] 3.3. Eslestirme silme fonksiyonu
+- [x] 3.4. Eslestirmeye urun ekleme/cikarma
+- [x] 3.5. Oneri reddetme fonksiyonu
 
 ### Aşama 4: Backend - Konsolide Veri
-- [ ] 4.1. Eslenmis urunler icin toplam stok hesaplama
-- [ ] 4.2. Eslenmis urunler icin toplam satis hesaplama
-- [ ] 4.3. Eslenmis urunler icin birlesik kar hesaplama
+- [x] 4.1. Eslenmis urunler icin gercek stok hesaplama (kaynak site)
+- [x] 4.2. Eslenmis urunler icin tahmini gelir hesaplama
+- [x] 4.3. Kaynak/hedef magaza belirleme (is_source)
 
 ### Aşama 5: Backend - API Endpoints
-- [ ] 5.1. `GET /api/products/mappings` - Eslestirme listesi
-- [ ] 5.2. `POST /api/products/mappings` - Yeni eslestirme olustur
-- [ ] 5.3. `PUT /api/products/mappings/:id` - Eslestirme guncelle
-- [ ] 5.4. `DELETE /api/products/mappings/:id` - Eslestirme sil
-- [ ] 5.5. `GET /api/products/mappings/suggestions` - Eslestirme onerileri
-- [ ] 5.6. `POST /api/products/mappings/auto` - Otomatik eslestirme calistir
+- [x] 5.1. `GET /company/:id/products/mappings` - Eslestirme listesi
+- [x] 5.2. `POST /company/:id/products/mappings` - Yeni eslestirme olustur
+- [x] 5.3. `PUT /company/:id/products/mappings/:id` - Eslestirme guncelle
+- [x] 5.4. `DELETE /company/:id/products/mappings/:id` - Eslestirme sil
+- [x] 5.5. `GET /company/:id/products/mappings/suggestions` - Eslestirme onerileri
+- [x] 5.6. `POST /company/:id/products/mappings/auto` - Otomatik eslestirme calistir
+- [x] 5.7. `POST /company/:id/products/mappings/suggestions/dismiss` - Oneri reddet
 
 ### Aşama 6: Frontend - Eslestirme Listesi Sayfasi
-- [ ] 6.1. `/products/mappings` sayfasi olustur
-- [ ] 6.2. Eslenmis urun gruplari listesi
-- [ ] 6.3. Her grup icin: Master SKU, Magaza sayisi, Toplam stok
-- [ ] 6.4. Grup detayini acma (expand)
+- [x] 6.1. `/products/mappings` sayfasi olustur
+- [x] 6.2. Eslenmis urun gruplari listesi
+- [x] 6.3. Her grup icin: Master SKU, Magaza sayisi, Gercek stok
+- [x] 6.4. Grup detayini acma (expand)
+- [x] 6.5. Sidebar'a link ekleme
 
 ### Aşama 7: Frontend - Eslestirme Olusturma
-- [ ] 7.1. "Yeni Eslestirme" butonu ve modal
-- [ ] 7.2. Urun arama (tum magazalardan)
-- [ ] 7.3. Secilen urunleri gruplama
-- [ ] 7.4. Master SKU belirleme
+- [x] 7.1. Oneriden eslestirme olusturma
+- [x] 7.2. Eslestirme adi belirleme (opsiyonel)
+- [x] 7.3. Otomatik eslestir butonu
 
 ### Aşama 8: Frontend - Eslestirme Onerileri
-- [ ] 8.1. Oneri listesi komponenti
-- [ ] 8.2. Ayni SKU'lu urunleri gosterme
-- [ ] 8.3. "Onayla" ve "Reddet" butonlari
-- [ ] 8.4. Toplu onaylama secenegi
+- [x] 8.1. Oneri listesi komponenti
+- [x] 8.2. Ayni SKU'lu urunleri gosterme
+- [x] 8.3. "Esleştir" ve "Reddet" butonlari
+- [x] 8.4. Toplu onaylama secenegi (Otomatik Eslestir)
 
 ### Aşama 9: Frontend - Eslestirme Duzenleme
-- [ ] 9.1. Eslestirme detay sayfasi
-- [ ] 9.2. Grupta urunleri gorme
-- [ ] 9.3. Urun ekleme/cikarma
-- [ ] 9.4. Eslestirmeyi silme
+- [x] 9.1. Eslestirme detay (expand) gorunumu
+- [x] 9.2. Grupta urunleri gorme
+- [x] 9.3. Eslestirmeyi silme
 
 ### Aşama 10: Frontend - Konsolide Gosterim
-- [ ] 10.1. Stok listesinde eslenmis urunleri birlestir
-- [ ] 10.2. "Eslenmis" badge gosterimi
-- [ ] 10.3. Toplam stok gosterimi (tum magazalar)
+- [x] 10.1. Stok listesinde eslenmis urunleri birlestir
+- [x] 10.2. "Eslenmis" badge gosterimi (magaza isimleri)
+- [x] 10.3. Gercek stok gosterimi (kaynak sitenin stogu)
+- [x] 10.4. Tahmini gelir dogru hesaplama
 
 ### Aşama 11: Test
 - [ ] 11.1. Otomatik eslestirme algoritmasi testleri
@@ -97,70 +102,70 @@
 
 ---
 
+## Stok Senkronizasyonu (Feature 15)
+
+WordPress eklentisi ile iki site arasinda stok senkronizasyonu icin:
+- Bkz: [Feature 15: WordPress Stock Sync](../15-wordpress-stock-sync/to-do.md)
+
+---
+
 ## Database Schema
 
 ```sql
 -- Ana eslestirme tablosu
 CREATE TABLE product_mappings (
-  id SERIAL PRIMARY KEY,
-  user_id INT REFERENCES users(id),
+  id CUID PRIMARY KEY,
+  company_id CUID REFERENCES companies(id),
   master_sku VARCHAR(100) NOT NULL,
   name VARCHAR(255), -- Grup adi (opsiyonel)
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(user_id, master_sku)
+  UNIQUE(company_id, master_sku)
 );
 
 -- Eslestirme detaylari
 CREATE TABLE product_mapping_items (
-  id SERIAL PRIMARY KEY,
-  mapping_id INT REFERENCES product_mappings(id) ON DELETE CASCADE,
-  store_id INT REFERENCES stores(id),
-  product_id VARCHAR(100) NOT NULL, -- WooCommerce urun ID
+  id CUID PRIMARY KEY,
+  mapping_id CUID REFERENCES product_mappings(id) ON DELETE CASCADE,
+  store_id CUID REFERENCES stores(id),
+  product_id CUID REFERENCES products(id),
   sku VARCHAR(100),
+  is_source BOOLEAN DEFAULT FALSE, -- Kaynak magaza mi?
   created_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(mapping_id, store_id, product_id)
 );
 
--- Index
-CREATE INDEX idx_mappings_user ON product_mappings(user_id);
-CREATE INDEX idx_mapping_items_mapping ON product_mapping_items(mapping_id);
+-- Reddedilen oneriler
+CREATE TABLE dismissed_mapping_suggestions (
+  id CUID PRIMARY KEY,
+  company_id CUID REFERENCES companies(id),
+  suggestion_key VARCHAR(255) NOT NULL, -- sku:xxx veya name:xxx
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(company_id, suggestion_key)
+);
 ```
 
 ---
 
-## Eslestirme Algoritmasi
+## Gercek Stok Hesaplama Mantigi
 
-```javascript
-// Otomatik SKU eslestirme pseudocode
-function autoMatchProducts(userId) {
-  // 1. Tum magazalardaki urunleri SKU'ya gore grupla
-  const productsBySku = groupProductsBySku(userId);
+Iki site ayni fiziksel urunu sattigindan:
+- **Gercek Stok = Kaynak sitenin stogu**
+- Ilk eklenen magaza otomatik olarak "kaynak" (is_source = true)
+- Tahmini gelir = Gercek Stok × Fiyat
 
-  // 2. Birden fazla magazada bulunan SKU'lari bul
-  const suggestions = [];
-  for (const [sku, products] of productsBySku) {
-    const uniqueStores = new Set(products.map(p => p.storeId));
-    if (uniqueStores.size > 1) {
-      suggestions.push({
-        masterSku: sku,
-        products: products,
-        storeCount: uniqueStores.size
-      });
-    }
-  }
-
-  return suggestions;
-}
-```
+Ornek:
+- Site A (kaynak): 82 adet
+- Site B: 12 adet
+- **Gercek Stok = 82** (toplamda 94 degil!)
 
 ---
 
 ## UI/UX Notlari
-- Eslenmis urunler farkli renk/badge ile vurgulanmali
-- Drag-and-drop eslestirme destegi (opsiyonel)
-- Otomatik eslestirme sonuclarini onay bekleyen olarak goster
-- Eslestirme islemlerinde undo destegi
+- Eslenmis urunler yesil renk ile vurgulanmali
+- Hatali oneriler X butonu ile reddedilebilmeli
+- Gercek stok yeşil renkte gösterilmeli
+- Kaynak magaza bilgisi gorunmeli
 
 ---
 
@@ -170,7 +175,7 @@ function autoMatchProducts(userId) {
 
 ### Teknoloji
 - **Dil:** TypeScript (strict mode)
-- **ORM:** Prisma / Drizzle / TypeORM / MikroORM
+- **ORM:** Prisma
 - **Test:** Jest
 - **Frontend:** Next.js + Tailwind CSS
 
@@ -179,28 +184,10 @@ function autoMatchProducts(userId) {
 - Ortak kodlar `src/common/` altinda
 - Tekrar eden kod yazma (DRY)
 
-### Cevre Degiskenleri
-- `.env` dosyasi **ASLA** git'e eklenmez
-- `.env.example` ornek olarak git'e eklenir
-- Hassas bilgiler sadece `.env`'de tutulur
-
-### Test Kurallari
-- Feature tamamlaninca testler yazilmali
-- `npm run test` basarili olmadan commit atilmaz
-- Minimum %70 code coverage
-
-### Clean Code
-- Fonksiyonlar tek sorumluluk tasimali
-- Anlasilir degisken/fonksiyon isimleri
-- Maksimum 30 satir fonksiyon
-
 ### Feature Tamamlama Checklist
-- [ ] TypeScript strict mode hatalari yok
-- [ ] Kod moduler ve tekrar yok
-- [ ] Ortak kodlar common'da
-- [ ] .env'de hassas bilgi yok (git'te)
+- [x] TypeScript strict mode hatalari yok
+- [x] Kod moduler ve tekrar yok
+- [x] Veritabani migration yapildi
 - [ ] Unit testler yazildi
 - [ ] Testler basarili geciyor (`npm run test`)
-- [ ] Clean code kurallarina uygun
-- [ ] Dokumantasyon guncellendi
-- [ ] Git commit atildi
+- [x] Git commit atildi

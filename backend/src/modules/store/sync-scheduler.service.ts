@@ -42,7 +42,91 @@ export class SyncSchedulerService {
   }
 
   /**
-   * Her saat başı aktif mağazaları senkronize et
+   * Her dakika sadece stok bilgisini güncelle (hafif sync)
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleStockSync() {
+    this.logger.log('Stok senkronizasyonu başlatılıyor...');
+
+    try {
+      const activeStores = await this.prisma.store.findMany({
+        where: { status: StoreStatus.ACTIVE, isSyncing: false },
+      });
+
+      for (const store of activeStores) {
+        await this.syncStockOnly(store);
+      }
+
+      this.logger.log('Stok senkronizasyonu tamamlandı');
+    } catch (error: any) {
+      this.logger.error('Stok senkronizasyon hatası:', error.message);
+    }
+  }
+
+  /**
+   * Sadece stok bilgisini güncelle
+   */
+  private async syncStockOnly(store: any) {
+    try {
+      const consumerKey = decrypt(store.consumerKey, this.encryptionKey);
+      const consumerSecret = decrypt(store.consumerSecret, this.encryptionKey);
+
+      const client = new WooCommerceClient({
+        url: store.url,
+        consumerKey,
+        consumerSecret,
+      });
+
+      // Sadece stok bilgisi olan ürünleri çek
+      const products = await client.getAllProducts();
+
+      for (const product of products) {
+        // Ana ürün stoğunu güncelle
+        await this.prisma.product.updateMany({
+          where: {
+            storeId: store.id,
+            wcProductId: product.id,
+          },
+          data: {
+            stockQuantity: product.stock_quantity || 0,
+            stockStatus: product.stock_status,
+            syncedAt: new Date(),
+          },
+        });
+
+        // Variable ürünlerin varyasyonlarını güncelle
+        if (product.type === 'variable') {
+          const variations = await client.getProductVariations(product.id);
+
+          for (const variation of variations) {
+            await this.prisma.productVariation.updateMany({
+              where: {
+                product: { storeId: store.id, wcProductId: product.id },
+                wcVariationId: variation.id,
+              },
+              data: {
+                stockQuantity: variation.stock_quantity || 0,
+                stockStatus: variation.stock_status,
+                syncedAt: new Date(),
+              },
+            });
+          }
+        }
+      }
+
+      // Sync zamanını güncelle
+      await this.prisma.store.update({
+        where: { id: store.id },
+        data: { lastSyncAt: new Date() },
+      });
+
+    } catch (error: any) {
+      this.logger.error(`Stok sync hatası (${store.name}):`, error.message);
+    }
+  }
+
+  /**
+   * Her saat başı aktif mağazaları tam senkronize et
    */
   @Cron(CronExpression.EVERY_HOUR)
   async handleHourlySync() {

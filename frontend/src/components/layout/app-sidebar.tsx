@@ -13,6 +13,7 @@ import {
   Send,
   BarChart3,
   Crown,
+  Link2,
 } from 'lucide-react';
 
 import { TeamSwitcher } from '@/components/layout/team-switcher';
@@ -64,6 +65,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: 'Stoklar',
       url: `/${companySlug}/inventory`,
       icon: Package,
+    },
+    {
+      title: 'Ürün Eşleştirme',
+      url: `/${companySlug}/product-mappings`,
+      icon: Link2,
     },
     {
       title: 'Siparişler',
