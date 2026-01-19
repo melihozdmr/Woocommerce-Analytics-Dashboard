@@ -8,6 +8,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 import { PricingService } from './pricing.service';
 import { PlanService } from './plan.service';
 import { PlanType } from '@prisma/client';
@@ -22,6 +23,7 @@ export class PricingController {
   /**
    * Get all available plans
    */
+  @Public()
   @Get('plans')
   async getPlans() {
     const plans = await this.planService.getAllPlans();
@@ -31,6 +33,7 @@ export class PricingController {
   /**
    * Get current pricing status
    */
+  @Public()
   @Get('status')
   async getPricingStatus() {
     return this.pricingService.getPricingStatus();
@@ -41,8 +44,8 @@ export class PricingController {
    */
   @Get('my-plan')
   @UseGuards(JwtAuthGuard)
-  async getMyPlan(@Request() req: { user: { sub: string } }) {
-    const userId = req.user.sub;
+  async getMyPlan(@Request() req: { user: { id: string } }) {
+    const userId = req.user.id;
     const planInfo = await this.planService.getUserPlanInfo(userId);
     return {
       plan: {
@@ -65,8 +68,8 @@ export class PricingController {
    */
   @Get('usage')
   @UseGuards(JwtAuthGuard)
-  async getUsage(@Request() req: { user: { sub: string } }) {
-    const userId = req.user.sub;
+  async getUsage(@Request() req: { user: { id: string } }) {
+    const userId = req.user.id;
     return this.planService.getUserUsage(userId);
   }
 
@@ -77,10 +80,10 @@ export class PricingController {
   @Post('upgrade')
   @UseGuards(JwtAuthGuard)
   async requestUpgrade(
-    @Request() req: { user: { sub: string } },
+    @Request() req: { user: { id: string } },
     @Body() body: { planType: PlanType },
   ) {
-    const userId = req.user.sub;
+    const userId = req.user.id;
     return this.planService.upgradePlan(userId, body.planType);
   }
 

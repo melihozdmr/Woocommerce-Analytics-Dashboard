@@ -11,7 +11,7 @@ describe('PricingController', () => {
   let planService: PlanService;
 
   const mockUserId = 'user-123';
-  const mockRequest = { user: { sub: mockUserId } };
+  const mockRequest = { user: { id: mockUserId } };
 
   const mockPlans = [
     {

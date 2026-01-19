@@ -208,8 +208,8 @@ export function TeamSwitcher() {
                   <span className="truncate font-semibold">
                     {currentCompany?.name || 'Şirket Seçin'}
                   </span>
-                  <span className="truncate text-xs">
-                    {user?.plan?.name || 'Free'} Plan
+                  <span className="truncate text-xs text-muted-foreground">
+                    {user?.plan?.displayName || 'Free'} Plan
                   </span>
                 </div>
                 <ChevronsUpDown className="ml-auto" />

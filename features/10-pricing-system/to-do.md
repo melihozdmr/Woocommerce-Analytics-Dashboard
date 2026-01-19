@@ -83,8 +83,8 @@
 ### Aşama 5: Backend - Ozellik Kisitlama
 - [x] 5.1. `FeatureAccessGuard` olustur
 - [x] 5.2. `RequireFeature` decorator olustur
-- [ ] 5.3. Export endpoint'lerine middleware ekle (Phase 2)
-- [ ] 5.4. API erisim endpoint'lerine middleware ekle (Phase 2)
+- [x] 5.3. Export endpoint'lerine middleware ekle
+- [x] 5.4. API erisim endpoint'lerine middleware ekle
 
 ### Aşama 6: Backend - API Endpoints
 - [x] 6.1. `GET /api/pricing/plans` - Tum planlari listele
@@ -114,9 +114,9 @@
 - [x] 10.3. "Plan Yukselt" CTA butonu
 
 ### Aşama 11: Frontend - Ozellik Kisitlama UI
-- [ ] 11.1. Kisitli ozellikler icin "Pro'da mevcut" badge'i (Phase 2)
-- [ ] 11.2. Disabled state butonlar (Phase 2)
-- [ ] 11.3. Upgrade modal/tooltip (Phase 2)
+- [x] 11.1. Kisitli ozellikler icin "Pro'da mevcut" badge'i (ProBadge)
+- [x] 11.2. Disabled state butonlar (FeatureGate showDisabled)
+- [x] 11.3. Upgrade modal/tooltip (UpgradeModal, UpgradePrompt)
 
 ### Aşama 12: Admin Panel (Opsiyonel - SaaS Sonrasi)
 - [ ] 12.1. Admin pricing toggle UI

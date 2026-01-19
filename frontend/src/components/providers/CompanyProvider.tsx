@@ -1,9 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useCompanyStore, Company } from '@/stores/companyStore';
-import { useAuthStore } from '@/stores/authStore';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface CompanyContextType {
@@ -57,16 +56,27 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const params = useParams();
   const companySlug = params.companySlug as string;
 
-  const { user } = useAuthStore();
   const { companies, currentCompany, fetchCompanies, isLoading: storeLoading } = useCompanyStore();
   const [isValidating, setIsValidating] = useState(true);
   const [validatedCompany, setValidatedCompany] = useState<Company | null>(null);
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const fetchTriggered = useRef(false);
 
+  // Fetch companies on mount - only once
   useEffect(() => {
-    fetchCompanies();
+    if (fetchTriggered.current) return;
+    fetchTriggered.current = true;
+
+    fetchCompanies().finally(() => {
+      setInitialFetchDone(true);
+    });
   }, [fetchCompanies]);
 
+  // Validate company after initial fetch completes
   useEffect(() => {
+    // Wait for initial fetch to complete
+    if (!initialFetchDone) return;
+    // Also wait if store is still loading (e.g., during switchCompany)
     if (storeLoading) return;
 
     // Find company by slug
@@ -90,9 +100,10 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     if (currentCompany?.id !== company.id) {
       useCompanyStore.getState().setCurrentCompany(company);
     }
-  }, [companySlug, companies, storeLoading, currentCompany, router]);
+  }, [companySlug, companies, storeLoading, currentCompany, router, initialFetchDone]);
 
-  if (storeLoading || isValidating) {
+  // Show loading until initial fetch is done and validation completes
+  if (!initialFetchDone || storeLoading || isValidating) {
     return <CompanyLoadingSkeleton />;
   }
 

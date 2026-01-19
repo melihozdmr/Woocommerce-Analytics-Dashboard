@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useCompanyStore } from '@/stores/companyStore';
@@ -64,32 +64,43 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, checkAuth, accessToken } = useAuthStore();
   const { companies, currentCompany, fetchCompanies } = useCompanyStore();
   const [isHydrated, setIsHydrated] = useState(false);
+  const [authCheckDone, setAuthCheckDone] = useState(false);
   const [companiesFetched, setCompaniesFetched] = useState(false);
+  const authCheckTriggered = useRef(false);
 
   // Wait for hydration
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  // Check auth on mount
+  // Check auth on mount - only once
   useEffect(() => {
-    if (isHydrated && accessToken) {
-      checkAuth();
+    if (!isHydrated) return;
+    if (authCheckTriggered.current) return;
+    authCheckTriggered.current = true;
+
+    if (accessToken) {
+      checkAuth().finally(() => {
+        setAuthCheckDone(true);
+      });
+    } else {
+      // No token, auth check is done (user is not authenticated)
+      setAuthCheckDone(true);
     }
   }, [isHydrated, accessToken, checkAuth]);
 
   // Fetch companies when authenticated
   useEffect(() => {
-    if (isHydrated && isAuthenticated && !companiesFetched) {
+    if (isHydrated && authCheckDone && isAuthenticated && !companiesFetched) {
       fetchCompanies().then(() => {
         setCompaniesFetched(true);
       });
     }
-  }, [isHydrated, isAuthenticated, companiesFetched, fetchCompanies]);
+  }, [isHydrated, authCheckDone, isAuthenticated, companiesFetched, fetchCompanies]);
 
-  // Redirect logic
+  // Redirect logic - only run after auth check is complete
   useEffect(() => {
-    if (!isHydrated || isLoading) return;
+    if (!isHydrated || !authCheckDone || isLoading) return;
 
     const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
     const isCompanySetupPath = companySetupPaths.some((path) => pathname.startsWith(path));
@@ -134,14 +145,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         router.push(`/${companies[0].slug}`);
       }
     }
-  }, [isHydrated, isAuthenticated, isLoading, pathname, router, companies, currentCompany, companiesFetched]);
+  }, [isHydrated, authCheckDone, isAuthenticated, isLoading, pathname, router, companies, currentCompany, companiesFetched]);
 
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
   const isCompanySetupPath = companySetupPaths.some((path) => pathname.startsWith(path));
   const isDashboardPath = !isPublicPath && !isCompanySetupPath;
 
   // Show loading while hydrating or checking auth
-  if (!isHydrated) {
+  if (!isHydrated || !authCheckDone) {
     return isDashboardPath ? <DashboardLoadingSkeleton /> : <AuthLoadingSkeleton />;
   }
 

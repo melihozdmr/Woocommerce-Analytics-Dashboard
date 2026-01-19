@@ -61,6 +61,8 @@ interface PricingState {
   fetchUsage: () => Promise<void>;
   fetchPricingStatus: () => Promise<void>;
   requestUpgrade: (planType: 'FREE' | 'PRO' | 'ENTERPRISE') => Promise<boolean>;
+  hasFeature: (feature: keyof PlanFeatures) => boolean;
+  getRequiredPlanForFeature: (feature: keyof PlanFeatures) => 'PRO' | 'ENTERPRISE' | null;
   reset: () => void;
 }
 
@@ -135,6 +137,36 @@ export const usePricingStore = create<PricingState>((set, get) => ({
       set({ error: message, isLoading: false });
       return false;
     }
+  },
+
+  // Check if user has access to a feature
+  hasFeature: (feature: keyof PlanFeatures): boolean => {
+    const { myPlan, isPricingEnabled } = get();
+
+    // If pricing is disabled, all features are available
+    if (!isPricingEnabled) return true;
+
+    // If no plan info, assume no access
+    if (!myPlan) return false;
+
+    // Grandfathered users have all features
+    if (myPlan.isGrandfathered) return true;
+
+    return myPlan.features[feature] === true;
+  },
+
+  // Get the minimum plan required for a feature
+  getRequiredPlanForFeature: (feature: keyof PlanFeatures): 'PRO' | 'ENTERPRISE' | null => {
+    // Feature to plan mapping
+    const featurePlanMap: Record<keyof PlanFeatures, 'PRO' | 'ENTERPRISE'> = {
+      csvExport: 'PRO',
+      pdfExport: 'PRO',
+      emailReports: 'ENTERPRISE',
+      apiAccess: 'ENTERPRISE',
+      prioritySupport: 'ENTERPRISE',
+    };
+
+    return featurePlanMap[feature] || null;
   },
 
   // Reset store

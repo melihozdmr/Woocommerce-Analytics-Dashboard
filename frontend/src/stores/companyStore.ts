@@ -21,7 +21,7 @@ interface CompanyState {
   setCurrentCompany: (company: Company | null) => void;
 }
 
-export const useCompanyStore = create<CompanyState>((set, get) => ({
+export const useCompanyStore = create<CompanyState>((set) => ({
   companies: [],
   currentCompany: null,
   isLoading: false,

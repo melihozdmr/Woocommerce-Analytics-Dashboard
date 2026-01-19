@@ -28,7 +28,7 @@ export class FeatureAccessGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const userId = request.user?.sub;
+    const userId = request.user?.id;
 
     if (!userId) {
       throw new ForbiddenException('Kullanıcı doğrulanmamış');
