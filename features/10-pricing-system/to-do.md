@@ -19,19 +19,19 @@
 ---
 
 ## Kabul Kriterleri (US-014)
-- [ ] Database toggle ile fiyatlandirma aktif/pasif yapilabilmeli
-- [ ] Pasifken tum ozellikler ucretsiz erisime acik
-- [ ] Aktifken plan bazli kisitlamalar devreye girmeli
-- [ ] Mevcut kullanicilar etkilenmemeli (grandfathering opsiyonu)
-- [ ] Toggle degisikligi anlik yansimali
+- [x] Database toggle ile fiyatlandirma aktif/pasif yapilabilmeli
+- [x] Pasifken tum ozellikler ucretsiz erisime acik
+- [x] Aktifken plan bazli kisitlamalar devreye girmeli
+- [x] Mevcut kullanicilar etkilenmemeli (grandfathering opsiyonu)
+- [x] Toggle degisikligi anlik yansimali
 
 ## Kabul Kriterleri (US-015)
-- [ ] Free tier: 2 magaza limiti
-- [ ] Pro tier: 5 magaza limiti
-- [ ] Enterprise tier: 10 magaza limiti (veya sinirsiz)
-- [ ] Limit asildiginda uyari mesaji gosterilmeli
-- [ ] Plan yukseltme yonlendirmesi yapilmali
-- [ ] Mevcut kullanim / limit gosterilmeli
+- [x] Free tier: 2 magaza limiti
+- [x] Pro tier: 5 magaza limiti
+- [x] Enterprise tier: 10 magaza limiti (veya sinirsiz)
+- [x] Limit asildiginda uyari mesaji gosterilmeli
+- [x] Plan yukseltme yonlendirmesi yapilmali
+- [x] Mevcut kullanim / limit gosterilmeli
 
 ---
 
@@ -55,68 +55,68 @@
 ## Yapilacaklar
 
 ### Aşama 1: Veritabani - Plan Tablolari
-- [ ] 1.1. `plans` tablosu olustur
+- [x] 1.1. `plans` tablosu olustur
   - id, name, store_limit, price_monthly, price_yearly, features_json, is_active
-- [ ] 1.2. Varsayilan planlari ekle (Free, Pro, Enterprise)
-- [ ] 1.3. `settings` tablosuna `pricing_enabled` key ekle
-- [ ] 1.4. `users` tablosuna `plan_id` foreign key ekle
-- [ ] 1.5. `users` tablosuna `grandfathered` boolean ekle
+- [x] 1.2. Varsayilan planlari ekle (Free, Pro, Enterprise)
+- [x] 1.3. `settings` tablosuna `pricing_enabled` key ekle
+- [x] 1.4. `users` tablosuna `plan_id` foreign key ekle
+- [x] 1.5. `users` tablosuna `grandfathered` boolean ekle
 
 ### Aşama 2: Backend - Pricing Toggle Mekanizmasi
-- [ ] 2.1. `PricingService` olustur
-- [ ] 2.2. `isPricingEnabled()` fonksiyonu
-- [ ] 2.3. Toggle state cache'leme (Redis)
-- [ ] 2.4. Admin toggle endpoint: `PUT /api/admin/pricing/toggle`
+- [x] 2.1. `PricingService` olustur
+- [x] 2.2. `isPricingEnabled()` fonksiyonu
+- [x] 2.3. Toggle state cache'leme (Redis)
+- [x] 2.4. Admin toggle endpoint: `PUT /api/pricing/toggle`
 
 ### Aşama 3: Backend - Plan Yonetimi
-- [ ] 3.1. `PlanService` olustur
-- [ ] 3.2. `getUserPlan(userId)` fonksiyonu
-- [ ] 3.3. `getStoreLimit(planId)` fonksiyonu
-- [ ] 3.4. `canAddStore(userId)` fonksiyonu
-- [ ] 3.5. `getFeatureAccess(userId, featureName)` fonksiyonu
+- [x] 3.1. `PlanService` olustur
+- [x] 3.2. `getUserPlan(userId)` fonksiyonu
+- [x] 3.3. `getStoreLimit(planId)` fonksiyonu
+- [x] 3.4. `canAddStore(userId)` fonksiyonu
+- [x] 3.5. `getFeatureAccess(userId, featureName)` fonksiyonu
 
 ### Aşama 4: Backend - Limit Kontrol Middleware
-- [ ] 4.1. `checkStoreLimit` middleware olustur
-- [ ] 4.2. Magaza ekleme endpoint'ine middleware ekle
-- [ ] 4.3. Limit asimi durumunda 403 + upgrade mesaji dondur
+- [x] 4.1. `StoreLimitGuard` olustur
+- [x] 4.2. Magaza ekleme endpoint'ine guard ekle
+- [x] 4.3. Limit asimi durumunda 403 + upgrade mesaji dondur
 
 ### Aşama 5: Backend - Ozellik Kisitlama
-- [ ] 5.1. `checkFeatureAccess` middleware olustur
-- [ ] 5.2. Export endpoint'lerine middleware ekle
-- [ ] 5.3. API erisim endpoint'lerine middleware ekle
-- [ ] 5.4. Veri guncelleme sikligini plan bazli ayarla
+- [x] 5.1. `FeatureAccessGuard` olustur
+- [x] 5.2. `RequireFeature` decorator olustur
+- [ ] 5.3. Export endpoint'lerine middleware ekle (Phase 2)
+- [ ] 5.4. API erisim endpoint'lerine middleware ekle (Phase 2)
 
 ### Aşama 6: Backend - API Endpoints
-- [ ] 6.1. `GET /api/settings/plans` - Tum planlari listele
-- [ ] 6.2. `GET /api/settings/my-plan` - Kullanicinin mevcut plani
-- [ ] 6.3. `GET /api/settings/usage` - Kullanim durumu (magaza kullanimi)
-- [ ] 6.4. `POST /api/settings/upgrade` - Plan yukseltme istegi
+- [x] 6.1. `GET /api/pricing/plans` - Tum planlari listele
+- [x] 6.2. `GET /api/pricing/my-plan` - Kullanicinin mevcut plani
+- [x] 6.3. `GET /api/pricing/usage` - Kullanim durumu (magaza kullanimi)
+- [x] 6.4. `POST /api/pricing/upgrade` - Plan yukseltme istegi
 
 ### Aşama 7: Backend - Grandfathering
-- [ ] 7.1. Mevcut kullanicilari grandfathered olarak isaretle
-- [ ] 7.2. Grandfathered kullanicilara mevcut limitleri koru
-- [ ] 7.3. Migration scripti olustur
+- [x] 7.1. Mevcut kullanicilari grandfathered olarak isaretle
+- [x] 7.2. Grandfathered kullanicilara mevcut limitleri koru
+- [x] 7.3. POST /api/pricing/grandfather-users endpoint
 
 ### Aşama 8: Frontend - Plan Gosterimi
-- [ ] 8.1. `PlanBadge` komponenti (Free, Pro, Enterprise)
-- [ ] 8.2. Header'da mevcut plan gosterimi
-- [ ] 8.3. Kullanim durumu gosterimi (2/5 magaza)
+- [x] 8.1. `PlanBadge` komponenti (Free, Pro, Enterprise)
+- [x] 8.2. Sidebar'da "Planlar" linki
+- [x] 8.3. Kullanim durumu gosterimi (UsageWarning)
 
 ### Aşama 9: Frontend - Plan Karsilastirma Sayfasi
-- [ ] 9.1. `/pricing` sayfasi olustur
-- [ ] 9.2. Plan ozellik karsilastirma tablosu
-- [ ] 9.3. Plan secim kartlari
-- [ ] 9.4. Aylik/Yillik toggle
+- [x] 9.1. `/pricing` sayfasi olustur
+- [x] 9.2. Plan ozellik karsilastirma tablosu
+- [x] 9.3. Plan secim kartlari
+- [x] 9.4. Aylik/Yillik toggle
 
 ### Aşama 10: Frontend - Limit Uyarilari
-- [ ] 10.1. Limit yaklasildiginda uyari banner'i
-- [ ] 10.2. Limit asildiginda modal gosterimi
-- [ ] 10.3. "Plan Yukselt" CTA butonu
+- [x] 10.1. Limit yaklasildiginda uyari banner'i
+- [x] 10.2. Limit asildiginda modal gosterimi (StoreLimitModal)
+- [x] 10.3. "Plan Yukselt" CTA butonu
 
 ### Aşama 11: Frontend - Ozellik Kisitlama UI
-- [ ] 11.1. Kisitli ozellikler icin "Pro'da mevcut" badge'i
-- [ ] 11.2. Disabled state butonlar
-- [ ] 11.3. Upgrade modal/tooltip
+- [ ] 11.1. Kisitli ozellikler icin "Pro'da mevcut" badge'i (Phase 2)
+- [ ] 11.2. Disabled state butonlar (Phase 2)
+- [ ] 11.3. Upgrade modal/tooltip (Phase 2)
 
 ### Aşama 12: Admin Panel (Opsiyonel - SaaS Sonrasi)
 - [ ] 12.1. Admin pricing toggle UI
@@ -124,10 +124,10 @@
 - [ ] 12.3. Kullanici plan atama
 
 ### Aşama 13: Test
-- [ ] 13.1. Plan limit kontrol testleri
-- [ ] 13.2. Feature access testleri
-- [ ] 13.3. Toggle mekanizmasi testleri
-- [ ] 13.4. Grandfathering testleri
+- [x] 13.1. Plan limit kontrol testleri
+- [x] 13.2. Feature access testleri
+- [x] 13.3. Toggle mekanizmasi testleri
+- [x] 13.4. Grandfathering testleri
 
 ---
 
@@ -200,12 +200,12 @@ INSERT INTO settings (key, value) VALUES ('pricing_enabled', 'false');
 - Maksimum 30 satir fonksiyon
 
 ### Feature Tamamlama Checklist
-- [ ] TypeScript strict mode hatalari yok
-- [ ] Kod moduler ve tekrar yok
-- [ ] Ortak kodlar common'da
-- [ ] .env'de hassas bilgi yok (git'te)
-- [ ] Unit testler yazildi
-- [ ] Testler basarili geciyor (`npm run test`)
-- [ ] Clean code kurallarina uygun
-- [ ] Dokumantasyon guncellendi
+- [x] TypeScript strict mode hatalari yok
+- [x] Kod moduler ve tekrar yok
+- [x] Ortak kodlar common'da
+- [x] .env'de hassas bilgi yok (git'te)
+- [x] Unit testler yazildi
+- [x] Testler basarili geciyor (`npm run test`)
+- [x] Clean code kurallarina uygun
+- [x] Dokumantasyon guncellendi
 - [ ] Git commit atildi

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import {
@@ -17,6 +18,8 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useCompanyStore } from '@/stores/companyStore';
+import { usePricingStore } from '@/stores/pricingStore';
+import { UsageWarning } from '@/components/pricing/usage-warning';
 
 // Page title mappings
 const pageTitles: Record<string, string> = {
@@ -27,6 +30,7 @@ const pageTitles: Record<string, string> = {
   'payments': 'Ödemeler',
   'reports': 'Raporlar',
   'refunds': 'İadeler',
+  'pricing': 'Planlar',
   'settings': 'Ayarlar',
 };
 
@@ -37,6 +41,13 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const { currentCompany } = useCompanyStore();
+  const { usage, fetchUsage, fetchPricingStatus } = usePricingStore();
+
+  // Fetch usage and pricing status on mount
+  useEffect(() => {
+    fetchUsage();
+    fetchPricingStatus();
+  }, [fetchUsage, fetchPricingStatus]);
 
   // Parse current path to build breadcrumbs
   // Path format: /[companySlug]/[module]/[subpage]
@@ -68,6 +79,15 @@ export default function DashboardLayout({
             </Breadcrumb>
           </div>
         </header>
+        {/* Usage Warning Banner */}
+        {usage && (usage.isNearLimit || usage.isAtLimit) && (
+          <UsageWarning
+            storeCount={usage.storeCount}
+            storeLimit={usage.storeLimit}
+            isAtLimit={usage.isAtLimit}
+            isNearLimit={usage.isNearLimit}
+          />
+        )}
         <div className="flex flex-1 flex-col">
           {children}
         </div>

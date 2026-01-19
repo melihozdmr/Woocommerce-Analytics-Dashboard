@@ -12,6 +12,7 @@ import {
   LifeBuoy,
   Send,
   BarChart3,
+  Crown,
 } from 'lucide-react';
 
 import { TeamSwitcher } from '@/components/layout/team-switcher';
@@ -83,6 +84,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: 'İadeler',
       url: `/${companySlug}/refunds`,
       icon: RotateCcw,
+    },
+    {
+      title: 'Planlar',
+      url: `/${companySlug}/pricing`,
+      icon: Crown,
     },
     {
       title: 'Ayarlar',

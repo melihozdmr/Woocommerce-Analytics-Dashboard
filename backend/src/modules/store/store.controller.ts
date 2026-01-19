@@ -8,11 +8,13 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { StoreService } from './store.service';
 import { CreateStoreDto, UpdateStoreDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { StoreLimitGuard } from '../pricing/guards/store-limit.guard';
 
 @ApiTags('stores')
 @Controller('company/:companyId/stores')
@@ -33,9 +35,11 @@ export class StoreController {
   }
 
   @Post()
+  @UseGuards(StoreLimitGuard)
   @ApiOperation({ summary: 'Yeni mağaza ekle' })
   @ApiResponse({ status: 201, description: 'Mağaza oluşturuldu' })
   @ApiResponse({ status: 400, description: 'Bağlantı hatası veya limit aşımı' })
+  @ApiResponse({ status: 403, description: 'Mağaza limiti aşıldı' })
   async createStore(
     @Param('companyId') companyId: string,
     @CurrentUser('id') userId: string,
