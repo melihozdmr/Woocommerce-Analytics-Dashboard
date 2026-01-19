@@ -60,7 +60,20 @@ export interface WooCommerceOrder {
     first_name: string;
     last_name: string;
   };
-  line_items: Array<{ quantity: number }>;
+  line_items: Array<{
+    id: number;
+    name: string;
+    product_id: number;
+    variation_id: number;
+    quantity: number;
+    tax_class: string;
+    subtotal: string;
+    subtotal_tax: string;
+    total: string;
+    total_tax: string;
+    sku: string;
+    price: number;
+  }>;
   date_created: string;
 }
 

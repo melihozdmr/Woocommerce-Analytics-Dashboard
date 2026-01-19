@@ -29,6 +29,8 @@ export class OrderController {
     @Query('search') search?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.orderService.getOrders(companyId, req.user.sub, {
       page: page ? parseInt(page, 10) : undefined,
@@ -38,6 +40,8 @@ export class OrderController {
       search,
       sortBy,
       sortOrder,
+      startDate,
+      endDate,
     });
   }
 

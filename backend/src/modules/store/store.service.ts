@@ -635,7 +635,7 @@ export class StoreService implements OnModuleInit {
       for (const order of orders) {
         const itemsCount = order.line_items.reduce((sum, item) => sum + item.quantity, 0);
 
-        await this.prisma.order.upsert({
+        const savedOrder = await this.prisma.order.upsert({
           where: {
             storeId_wcOrderId: {
               storeId: store.id,
@@ -671,6 +671,38 @@ export class StoreService implements OnModuleInit {
             orderDate: new Date(order.date_created),
           },
         });
+
+        // Mevcut order itemları sil ve yeniden oluştur
+        await this.prisma.orderItem.deleteMany({
+          where: { orderId: savedOrder.id },
+        });
+
+        // Order itemları kaydet
+        for (const item of order.line_items) {
+          // Local product bul (varsa)
+          const localProduct = await this.prisma.product.findFirst({
+            where: {
+              storeId: store.id,
+              wcProductId: item.product_id,
+            },
+          });
+
+          await this.prisma.orderItem.create({
+            data: {
+              orderId: savedOrder.id,
+              productId: localProduct?.id || null,
+              wcProductId: item.product_id,
+              wcVariationId: item.variation_id || null,
+              name: item.name,
+              sku: item.sku || null,
+              quantity: item.quantity,
+              price: item.price || 0,
+              subtotal: parseFloat(item.subtotal) || 0,
+              total: parseFloat(item.total) || 0,
+              taxTotal: parseFloat(item.total_tax) || 0,
+            },
+          });
+        }
       }
 
       // Verileri kaydediyor

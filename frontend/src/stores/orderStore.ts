@@ -84,6 +84,12 @@ export interface OrdersResponse {
   totalPages: number;
 }
 
+export interface DateDetailOrders {
+  date: string;
+  orders: Order[];
+  total: number;
+}
+
 export interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
@@ -101,6 +107,7 @@ interface OrderState {
   ordersTotal: number;
   ordersPage: number;
   ordersTotalPages: number;
+  dateDetailOrders: DateDetailOrders | null;
 
   // Filters
   period: string;
@@ -111,6 +118,7 @@ interface OrderState {
   isLoading: boolean;
   isSummaryLoading: boolean;
   isTrendLoading: boolean;
+  isDateDetailLoading: boolean;
   error: string | null;
 
   // Actions
@@ -134,6 +142,8 @@ interface OrderState {
       sortOrder?: 'asc' | 'desc';
     }
   ) => Promise<void>;
+  fetchOrdersByDate: (companyId: string, date: string) => Promise<void>;
+  clearDateDetailOrders: () => void;
   fetchAllAnalytics: (companyId: string) => Promise<void>;
 }
 
@@ -149,12 +159,14 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   ordersTotal: 0,
   ordersPage: 1,
   ordersTotalPages: 0,
+  dateDetailOrders: null,
   period: '30d',
   customDateRange: null,
   selectedStoreId: null,
   isLoading: false,
   isSummaryLoading: false,
   isTrendLoading: false,
+  isDateDetailLoading: false,
   error: null,
 
   setPeriod: (period: string) => {
@@ -329,6 +341,46 @@ export const useOrderStore = create<OrderState>((set, get) => ({
         isLoading: false,
       });
     }
+  },
+
+  fetchOrdersByDate: async (companyId: string, date: string) => {
+    const { selectedStoreId } = get();
+    set({ isDateDetailLoading: true, error: null });
+    try {
+      // Calculate start and end of the day
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      const params = new URLSearchParams();
+      params.append('startDate', startDate.toISOString());
+      params.append('endDate', endDate.toISOString());
+      params.append('limit', '100'); // Get up to 100 orders for that day
+      if (selectedStoreId) params.append('storeId', selectedStoreId);
+
+      const response = await api.get<OrdersResponse>(
+        `/companies/${companyId}/orders?${params.toString()}`
+      );
+
+      set({
+        dateDetailOrders: {
+          date,
+          orders: response.data.orders,
+          total: response.data.total,
+        },
+        isDateDetailLoading: false,
+      });
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Günlük siparişler yüklenemedi',
+        isDateDetailLoading: false,
+      });
+    }
+  },
+
+  clearDateDetailOrders: () => {
+    set({ dateDetailOrders: null });
   },
 
   fetchAllAnalytics: async (companyId: string) => {

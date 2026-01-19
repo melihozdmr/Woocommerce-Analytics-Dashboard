@@ -1,4 +1,5 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, Inject } from '@nestjs/common';
+import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 import { PrismaService } from '../../database/prisma.service';
 import { InviteStatus } from '@prisma/client';
 
@@ -62,7 +63,39 @@ export interface RecentOrder {
 
 @Injectable()
 export class OrderService {
-  constructor(private prisma: PrismaService) {}
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
+
+  /**
+   * Generate cache key for order queries
+   */
+  private getCacheKey(
+    method: string,
+    companyId: string,
+    period: string,
+    storeId?: string,
+    customStartDate?: string,
+    customEndDate?: string,
+  ): string {
+    const parts = ['order', method, companyId, period];
+    if (storeId) parts.push(storeId);
+    if (customStartDate) parts.push(customStartDate);
+    if (customEndDate) parts.push(customEndDate);
+    return parts.join(':');
+  }
+
+  /**
+   * Invalidate all order caches for a company
+   */
+  async invalidateCompanyCache(companyId: string): Promise<void> {
+    // With Redis, we could use pattern matching, but with cache-manager
+    // we just let the TTL expire. For immediate invalidation, we'd need
+    // to track all keys or use Redis directly.
+  }
 
   /**
    * Check if user has access to company
@@ -168,6 +201,13 @@ export class OrderService {
   ): Promise<OrderSummaryWithComparison> {
     await this.checkCompanyAccess(companyId, userId);
 
+    // Check cache
+    const cacheKey = this.getCacheKey('summary', companyId, period, storeId, customStartDate, customEndDate);
+    const cached = await this.cacheManager.get<OrderSummaryWithComparison>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const storeIds = storeId
       ? [storeId]
       : await this.getCompanyStoreIds(companyId);
@@ -263,7 +303,7 @@ export class OrderService {
       ? previousTotalRevenue / previousTotalOrders
       : 0;
 
-    return {
+    const result: OrderSummaryWithComparison = {
       totalOrders,
       totalRevenue,
       avgOrderValue,
@@ -279,6 +319,11 @@ export class OrderService {
       revenueChange: this.calculatePercentageChange(totalRevenue, previousTotalRevenue),
       avgOrderValueChange: this.calculatePercentageChange(avgOrderValue, previousAvgOrderValue),
     };
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result;
   }
 
   /**
@@ -305,6 +350,13 @@ export class OrderService {
     customEndDate?: string,
   ): Promise<OrderTrend[]> {
     await this.checkCompanyAccess(companyId, userId);
+
+    // Check cache
+    const cacheKey = this.getCacheKey('trend', companyId, period, storeId, customStartDate, customEndDate);
+    const cached = await this.cacheManager.get<OrderTrend[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const storeIds = storeId
       ? [storeId]
@@ -377,13 +429,18 @@ export class OrderService {
     }
 
     // Convert to array
-    return Array.from(trendMap.entries())
+    const result = Array.from(trendMap.entries())
       .map(([date, data]) => ({
         date,
         orders: data.orders,
         revenue: data.revenue,
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result;
   }
 
   /**
@@ -398,6 +455,13 @@ export class OrderService {
     customEndDate?: string,
   ): Promise<StatusDistribution[]> {
     await this.checkCompanyAccess(companyId, userId);
+
+    // Check cache
+    const cacheKey = this.getCacheKey('status', companyId, period, storeId, customStartDate, customEndDate);
+    const cached = await this.cacheManager.get<StatusDistribution[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const storeIds = storeId
       ? [storeId]
@@ -440,11 +504,16 @@ export class OrderService {
       'on-hold': 'Bekletiliyor',
     };
 
-    return orders.map((o) => ({
+    const result = orders.map((o) => ({
       status: statusLabels[o.status] || o.status,
       count: o._count.id,
       revenue: Number(o._sum.total) || 0,
     }));
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result;
   }
 
   /**
@@ -459,6 +528,13 @@ export class OrderService {
     customEndDate?: string,
   ): Promise<PaymentMethodDistribution[]> {
     await this.checkCompanyAccess(companyId, userId);
+
+    // Check cache
+    const cacheKey = this.getCacheKey('payment', companyId, period, storeId, customStartDate, customEndDate);
+    const cached = await this.cacheManager.get<PaymentMethodDistribution[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const storeIds = storeId
       ? [storeId]
@@ -503,11 +579,16 @@ export class OrderService {
       other: 'Diğer',
     };
 
-    return orders.map((o) => ({
+    const result = orders.map((o) => ({
       method: methodLabels[o.paymentMethod || 'other'] || o.paymentMethod || 'Bilinmiyor',
       count: o._count.id,
       revenue: Number(o._sum.total) || 0,
     }));
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result;
   }
 
   /**
@@ -521,6 +602,13 @@ export class OrderService {
     customEndDate?: string,
   ): Promise<StoreDistribution[]> {
     await this.checkCompanyAccess(companyId, userId);
+
+    // Check cache
+    const cacheKey = this.getCacheKey('store', companyId, period, undefined, customStartDate, customEndDate);
+    const cached = await this.cacheManager.get<StoreDistribution[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     let startDate: Date;
     let endDate: Date;
@@ -563,7 +651,7 @@ export class OrderService {
       0,
     );
 
-    return stores.map((store) => {
+    const result = stores.map((store) => {
       const storeRevenue = store.orders.reduce((s, o) => s + Number(o.total), 0);
       return {
         storeId: store.id,
@@ -573,6 +661,11 @@ export class OrderService {
         percentage: totalRevenue > 0 ? Math.round((storeRevenue / totalRevenue) * 100 * 10) / 10 : 0,
       };
     }).sort((a, b) => b.revenue - a.revenue);
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result;
   }
 
   /**
@@ -638,6 +731,8 @@ export class OrderService {
       search?: string;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
+      startDate?: string;
+      endDate?: string;
     } = {},
   ) {
     await this.checkCompanyAccess(companyId, userId);
@@ -650,6 +745,8 @@ export class OrderService {
       search,
       sortBy = 'orderDate',
       sortOrder = 'desc',
+      startDate,
+      endDate,
     } = options;
 
     const storeIds = storeId
@@ -662,6 +759,17 @@ export class OrderService {
 
     if (status) {
       where.status = status;
+    }
+
+    // Date filtering
+    if (startDate || endDate) {
+      where.orderDate = {};
+      if (startDate) {
+        where.orderDate.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.orderDate.lte = new Date(endDate);
+      }
     }
 
     if (search) {

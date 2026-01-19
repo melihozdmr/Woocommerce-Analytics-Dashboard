@@ -6,6 +6,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
+import { CacheModule } from './modules/cache/cache.module';
 import { EmailModule } from './modules/email/email.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -42,6 +43,9 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
     // Database
     DatabaseModule,
+
+    // Cache (Redis)
+    CacheModule,
 
     // Email
     EmailModule,

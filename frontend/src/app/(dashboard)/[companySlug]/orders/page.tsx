@@ -72,7 +72,7 @@ import {
 } from '@/components/ui/data-table';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useStoreStore } from '@/stores/storeStore';
-import { useOrderStore, Order } from '@/stores/orderStore';
+import { useOrderStore, Order, DateDetailOrders } from '@/stores/orderStore';
 import { cn } from '@/lib/utils';
 
 type StatusFilter = 'all' | 'completed' | 'processing' | 'cancelled' | 'refunded';
@@ -141,11 +141,15 @@ export default function OrdersPage() {
     isLoading,
     isSummaryLoading,
     isTrendLoading,
+    isDateDetailLoading,
+    dateDetailOrders,
     setPeriod,
     setCustomDateRange,
     setSelectedStoreId,
     fetchAllAnalytics,
     fetchOrders,
+    fetchOrdersByDate,
+    clearDateDetailOrders,
   } = useOrderStore();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -156,10 +160,29 @@ export default function OrdersPage() {
   );
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isDateDetailOpen, setIsDateDetailOpen] = useState(false);
 
   const handleOrderClick = (order: Order) => {
     setSelectedOrder(order);
     setIsDetailOpen(true);
+  };
+
+  const handleChartClick = (data: any) => {
+    if (data?.activePayload?.[0]?.payload?.date && currentCompany?.id) {
+      const clickedDate = data.activePayload[0].payload.date;
+      // Don't fetch for weekly data (contains 'W')
+      if (clickedDate.includes('W')) return;
+
+      fetchOrdersByDate(currentCompany.id, clickedDate);
+      setIsDateDetailOpen(true);
+    }
+  };
+
+  const handleDateDetailClose = (open: boolean) => {
+    setIsDateDetailOpen(open);
+    if (!open) {
+      clearDateDetailOrders();
+    }
   };
 
   // Fetch analytics on mount and when filters change
@@ -475,11 +498,8 @@ export default function OrdersPage() {
         <div className="flex-1">
           {/* Trend Chart */}
           <div className="border-b">
-            <div className="px-6 py-4 border-b">
-              <h3 className="text-base font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Sipariş Trendi
-              </h3>
+            <div className="px-4 py-3 border-b">
+              <h3 className="text-sm font-medium">Sipariş Trendi</h3>
             </div>
             <div className="p-6">
               {isTrendLoading ? (
@@ -490,7 +510,12 @@ export default function OrdersPage() {
                 </div>
               ) : (
                 <ChartContainer config={trendChartConfig} className="h-[300px] w-full">
-                  <LineChart data={trend} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <LineChart
+                    data={trend}
+                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    onClick={handleChartClick}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis
                       dataKey="date"
@@ -551,11 +576,8 @@ export default function OrdersPage() {
           <div className="grid grid-cols-2">
             {/* Store Distribution Pie Chart */}
             <div className="border-r">
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-base font-medium flex items-center gap-2">
-                  <PieChartIcon className="h-4 w-4" />
-                  Mağaza Dağılımı
-                </h3>
+              <div className="px-4 py-3 border-b">
+                <h3 className="text-sm font-medium">Mağaza Dağılımı</h3>
               </div>
               <div className="p-6">
                 {storeDistribution.length === 0 ? (
@@ -612,11 +634,8 @@ export default function OrdersPage() {
 
             {/* Status Distribution Bar Chart */}
             <div>
-              <div className="px-6 py-4 border-b">
-                <h3 className="text-base font-medium flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  Durum Dağılımı
-                </h3>
+              <div className="px-4 py-3 border-b">
+                <h3 className="text-sm font-medium">Durum Dağılımı</h3>
               </div>
               <div className="p-6">
                 {statusDistribution.length === 0 ? (
@@ -894,6 +913,76 @@ export default function OrdersPage() {
                   <span className="font-medium">Toplam:</span>
                   <span className="font-semibold text-lg">{formatCurrency(selectedOrder.total)}</span>
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Date Detail Modal - Shows orders for clicked date on chart */}
+      <Dialog open={isDateDetailOpen} onOpenChange={handleDateDetailClose}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              {dateDetailOrders?.date && (
+                <>
+                  {new Date(dateDetailOrders.date).toLocaleDateString('tr-TR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })} Siparişleri
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {isDateDetailLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : dateDetailOrders?.orders.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Bu tarihte sipariş bulunamadı
+            </div>
+          ) : (
+            <div className="flex-1 overflow-auto">
+              <div className="mb-4 p-3 bg-muted/50 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Toplam Sipariş:</span>
+                <span className="font-semibold">{dateDetailOrders?.total || 0}</span>
+              </div>
+
+              <div className="space-y-3">
+                {dateDetailOrders?.orders.map((order) => {
+                  const statusInfo = statusLabels[order.status] || {
+                    label: order.status,
+                    color: 'bg-gray-100 text-gray-800',
+                  };
+                  return (
+                    <div
+                      key={order.id}
+                      className="border rounded-lg p-3 hover:bg-muted/30 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setIsDateDetailOpen(false);
+                        setIsDetailOpen(true);
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium">#{order.orderNumber}</span>
+                        <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <span>{order.customerName || 'Misafir'}</span>
+                        <span className="font-medium text-foreground">{formatCurrency(order.total)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                        <span>{order.itemsCount} ürün</span>
+                        <span>{order.store?.name}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

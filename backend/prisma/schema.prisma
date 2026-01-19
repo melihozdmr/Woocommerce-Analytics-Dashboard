@@ -180,6 +180,7 @@ model Product {
   // Relations
   store      Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
   variations ProductVariation[]
+  orderItems OrderItem[]
 
   @@unique([storeId, wcProductId])
   @@map("products")
@@ -230,11 +231,37 @@ model Order {
 
   // Relations
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  items OrderItem[]
 
   @@unique([storeId, wcOrderId])
   @@index([storeId, orderDate])
   @@index([storeId, status])
   @@map("orders")
+}
+
+model OrderItem {
+  id            String   @id @default(cuid())
+  orderId       String   @map("order_id")
+  productId     String?  @map("product_id") // Local product reference
+  wcProductId   Int      @map("wc_product_id") // WooCommerce product ID
+  wcVariationId Int?     @map("wc_variation_id") // WooCommerce variation ID
+  name          String
+  sku           String?
+  quantity      Int
+  price         Decimal  @db.Decimal(10, 2) // Unit price
+  subtotal      Decimal  @db.Decimal(10, 2) // quantity * price
+  total         Decimal  @db.Decimal(10, 2) // After discounts/taxes
+  taxTotal      Decimal  @default(0) @map("tax_total") @db.Decimal(10, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([wcProductId])
+  @@map("order_items")
 }
 
 model AnalyticsCache {

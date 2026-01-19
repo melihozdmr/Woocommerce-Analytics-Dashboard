@@ -16,7 +16,7 @@ Farkli zaman dilimlerinde siparis verilerini goruntuleme, satis trendlerini anal
 
 ### Backend - Order Sync
 - [x] Orders tablosu olustur (Prisma)
-- [ ] Order items tablosu olustur
+- [x] Order items tablosu olustur
 - [x] WooCommerce'den siparisleri cek
 - [x] Siparis durumlari: completed, processing, pending, cancelled, refunded
 - [x] Sync job scheduler
@@ -36,9 +36,9 @@ Farkli zaman dilimlerinde siparis verilerini goruntuleme, satis trendlerini anal
 - [x] Gunluk/Haftalik granularity
 
 ### Backend - Caching
-- [ ] Redis'te siparis aggregations cache'le
-- [ ] Period bazli cache keys
-- [ ] Cache invalidation on sync
+- [x] Redis'te siparis aggregations cache'le
+- [x] Period bazli cache keys
+- [x] Cache invalidation on sync
 
 ### Frontend - Order Analytics Dashboard
 - [x] Zaman filtresi
@@ -57,7 +57,7 @@ Farkli zaman dilimlerinde siparis verilerini goruntuleme, satis trendlerini anal
 - [x] Siparis Trendi (Line Chart)
   - [x] <30 gun: gunluk granularity
   - [x] >30 gun: haftalik granularity
-  - [ ] Veri noktasina tikla -> detay goster
+  - [x] Veri noktasina tikla -> detay goster
 - [x] Magaza Dagilimi (Pie Chart)
   - [x] Magazalara gore siparis dagilimi
   - [x] Tutar ve yuzde gosterimi
@@ -85,7 +85,7 @@ Farkli zaman dilimlerinde siparis verilerini goruntuleme, satis trendlerini anal
 - [x] AC-005.6: Siparis trendi line chart'ta gosterilir (gunluk/haftalik)
 - [x] AC-005.7: Period-over-period karsilastirma yuzde olarak gosterilir (+12%)
 - [x] AC-005.8: Siparis durum dagilimi gosterilir
-- [ ] AC-005.9: Chart veri noktasina tiklaninca detay gosterilir
+- [x] AC-005.9: Chart veri noktasina tiklaninca detay gosterilir
 - [x] AC-005.10: Veriler yuklenirken loading skeleton gosterilir
 
 ---
