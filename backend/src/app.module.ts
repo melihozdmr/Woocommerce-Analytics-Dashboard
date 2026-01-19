@@ -14,6 +14,7 @@ import { CompanyModule } from './modules/company/company.module';
 import { StoreModule } from './modules/store/store.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { OrderModule } from './modules/order/order.module';
+import { ProfitModule } from './modules/profit/profit.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -57,6 +58,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     StoreModule,
     InventoryModule,
     OrderModule,
+    ProfitModule,
   ],
   providers: [
     // Global Exception Filter

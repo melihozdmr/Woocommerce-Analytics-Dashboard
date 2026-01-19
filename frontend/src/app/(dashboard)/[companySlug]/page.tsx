@@ -6,9 +6,11 @@ import {
   Package,
   ShoppingCart,
   TrendingUp,
+  TrendingDown,
   AlertTriangle,
   BarChart3,
   Store,
+  DollarSign,
 } from 'lucide-react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useCompanyStore } from '@/stores/companyStore';
 import { useStoreStore } from '@/stores/storeStore';
 import { useInventoryStore } from '@/stores/inventoryStore';
+import { useProfitStore } from '@/stores/profitStore';
+import { cn } from '@/lib/utils';
 
 // Sample chart data
 const salesChartData = [
@@ -98,34 +102,46 @@ export default function DashboardPage() {
   const { currentCompany } = useCompanyStore();
   const { stores, fetchStores } = useStoreStore();
   const { summary, isLoading, fetchSummary } = useInventoryStore();
+  const {
+    summary: profitSummary,
+    isSummaryLoading: isProfitLoading,
+    fetchSummary: fetchProfitSummary,
+  } = useProfitStore();
 
-  // Fetch stores and inventory on mount
+  // Fetch stores, inventory and profit on mount
   useEffect(() => {
     if (currentCompany?.id) {
       fetchStores(currentCompany.id);
       fetchSummary(currentCompany.id);
+      fetchProfitSummary(currentCompany.id);
     }
-  }, [currentCompany?.id, fetchStores, fetchSummary]);
+  }, [currentCompany?.id, fetchStores, fetchSummary, fetchProfitSummary]);
 
   const hasStores = stores.length > 0;
 
   const stats = [
     {
+      name: 'Net Kar (30 Gün)',
+      value: profitSummary ? formatCurrency(profitSummary.netProfit) : '-',
+      icon: DollarSign,
+      loading: isProfitLoading,
+      positive: profitSummary && profitSummary.netProfit >= 0,
+      negative: profitSummary && profitSummary.netProfit < 0,
+      change: profitSummary?.profitChange,
+    },
+    {
+      name: 'Kar Marjı',
+      value: profitSummary ? `%${profitSummary.profitMargin}` : '-',
+      icon: TrendingUp,
+      loading: isProfitLoading,
+      positive: profitSummary && profitSummary.profitMargin >= 20,
+      alert: profitSummary && profitSummary.profitMargin < 20 && profitSummary.profitMargin >= 0,
+      negative: profitSummary && profitSummary.profitMargin < 0,
+    },
+    {
       name: 'Toplam Stok',
       value: summary ? formatNumber(summary.totalStock) : '-',
       icon: Package,
-      loading: isLoading,
-    },
-    {
-      name: 'Stok Değeri',
-      value: summary ? formatCurrency(summary.totalStockValue) : '-',
-      icon: ShoppingCart,
-      loading: isLoading,
-    },
-    {
-      name: 'Tahmini Gelir',
-      value: summary ? formatCurrency(summary.estimatedRevenue) : '-',
-      icon: TrendingUp,
       loading: isLoading,
     },
     {
@@ -153,15 +169,41 @@ export default function DashboardPage() {
               <span className="text-sm font-medium text-muted-foreground">
                 {stat.name}
               </span>
-              <stat.icon className={`h-5 w-5 ${stat.alert ? 'text-orange-500' : 'text-muted-foreground'}`} />
+              <stat.icon className={cn(
+                'h-5 w-5',
+                stat.positive ? 'text-green-500' :
+                stat.negative ? 'text-red-500' :
+                stat.alert ? 'text-orange-500' : 'text-muted-foreground'
+              )} />
             </div>
             <div className="flex items-baseline gap-2">
               {stat.loading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <span className={`text-2xl font-bold ${stat.alert ? 'text-orange-500' : hasStores ? 'text-foreground' : 'text-muted-foreground'}`}>
-                  {stat.value}
-                </span>
+                <>
+                  <span className={cn(
+                    'text-2xl font-bold',
+                    stat.positive ? 'text-green-600' :
+                    stat.negative ? 'text-red-600' :
+                    stat.alert ? 'text-orange-500' :
+                    hasStores ? 'text-foreground' : 'text-muted-foreground'
+                  )}>
+                    {stat.value}
+                  </span>
+                  {stat.change !== undefined && stat.change !== 0 && (
+                    <span className={cn(
+                      'flex items-center text-xs font-medium',
+                      stat.change > 0 ? 'text-green-600' : 'text-red-600'
+                    )}>
+                      {stat.change > 0 ? (
+                        <TrendingUp className="h-3 w-3 mr-0.5" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3 mr-0.5" />
+                      )}
+                      {stat.change > 0 ? '+' : ''}{stat.change}%
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
