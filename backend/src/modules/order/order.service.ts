@@ -61,6 +61,36 @@ export interface RecentOrder {
   storeName: string;
 }
 
+export interface PaymentSummary {
+  totalPayments: number;
+  totalRevenue: number;
+  completedPayments: number;
+  completedRevenue: number;
+  pendingPayments: number;
+  pendingRevenue: number;
+  failedPayments: number;
+  failedRevenue: number;
+  refundedPayments: number;
+  refundedRevenue: number;
+  successRate: number; // percentage
+  avgPaymentValue: number;
+  // Period comparison
+  previousTotalRevenue: number;
+  revenueChange: number;
+}
+
+export interface PendingPayment {
+  id: string;
+  orderNumber: string;
+  customerName: string | null;
+  customerEmail: string | null;
+  total: number;
+  paymentMethod: string | null;
+  orderDate: Date;
+  storeName: string;
+  daysPending: number;
+}
+
 @Injectable()
 export class OrderService {
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -582,7 +612,9 @@ export class OrderService {
       paypal: 'PayPal',
       stripe: 'Kredi Kartı',
       credit_card: 'Kredi Kartı',
-      iyzico: 'iyzico',
+      paytr_payment_gateway: 'Kredi Kartı',
+      paytr: 'Kredi Kartı',
+      iyzico: 'Kredi Kartı',
       other: 'Diğer',
     };
 
@@ -828,5 +860,190 @@ export class OrderService {
       page,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  /**
+   * Get payment summary (KPIs for payment analytics)
+   */
+  async getPaymentSummary(
+    companyId: string,
+    userId: string,
+    period: string = '30d',
+    storeId?: string,
+    customStartDate?: string,
+    customEndDate?: string,
+  ): Promise<PaymentSummary> {
+    await this.checkCompanyAccess(companyId, userId);
+
+    // Check cache
+    const cacheKey = this.getCacheKey('paymentSummary', companyId, period, storeId, customStartDate, customEndDate);
+    const cached = await this.cacheManager.get<PaymentSummary>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const storeIds = storeId
+      ? [storeId]
+      : await this.getCompanyStoreIds(companyId);
+
+    let startDate: Date;
+    let endDate: Date;
+    let prevStartDate: Date;
+    let prevEndDate: Date;
+
+    if (customStartDate && customEndDate) {
+      startDate = new Date(customStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(customEndDate);
+      endDate.setHours(23, 59, 59, 999);
+
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      prevEndDate = new Date(startDate);
+      prevEndDate.setDate(prevEndDate.getDate() - 1);
+      prevEndDate.setHours(23, 59, 59, 999);
+      prevStartDate = new Date(prevEndDate);
+      prevStartDate.setDate(prevStartDate.getDate() - daysDiff + 1);
+      prevStartDate.setHours(0, 0, 0, 0);
+    } else {
+      const range = this.getDateRange(period);
+      startDate = range.startDate;
+      endDate = range.endDate;
+      const prevRange = this.getPreviousPeriodRange(period);
+      prevStartDate = prevRange.startDate;
+      prevEndDate = prevRange.endDate;
+    }
+
+    // Get all orders in period
+    const orders = await this.prisma.order.findMany({
+      where: {
+        storeId: { in: storeIds },
+        orderDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        total: true,
+        status: true,
+      },
+    });
+
+    // Previous period for comparison
+    const previousOrders = await this.prisma.order.findMany({
+      where: {
+        storeId: { in: storeIds },
+        orderDate: {
+          gte: prevStartDate,
+          lte: prevEndDate,
+        },
+        status: { in: ['completed', 'processing'] },
+      },
+      select: {
+        total: true,
+      },
+    });
+
+    const totalPayments = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total), 0);
+
+    const completedOrders = orders.filter(o => o.status === 'completed' || o.status === 'processing');
+    const completedPayments = completedOrders.length;
+    const completedRevenue = completedOrders.reduce((sum, o) => sum + Number(o.total), 0);
+
+    const pendingOrders = orders.filter(o => o.status === 'pending' || o.status === 'on-hold');
+    const pendingPayments = pendingOrders.length;
+    const pendingRevenue = pendingOrders.reduce((sum, o) => sum + Number(o.total), 0);
+
+    const failedOrders = orders.filter(o => o.status === 'failed' || o.status === 'cancelled');
+    const failedPayments = failedOrders.length;
+    const failedRevenue = failedOrders.reduce((sum, o) => sum + Number(o.total), 0);
+
+    const refundedOrders = orders.filter(o => o.status === 'refunded');
+    const refundedPayments = refundedOrders.length;
+    const refundedRevenue = refundedOrders.reduce((sum, o) => sum + Number(o.total), 0);
+
+    const successRate = totalPayments > 0
+      ? Math.round((completedPayments / totalPayments) * 100 * 10) / 10
+      : 0;
+
+    const avgPaymentValue = completedPayments > 0
+      ? completedRevenue / completedPayments
+      : 0;
+
+    const previousTotalRevenue = previousOrders.reduce((sum, o) => sum + Number(o.total), 0);
+    const revenueChange = this.calculatePercentageChange(completedRevenue, previousTotalRevenue);
+
+    const result: PaymentSummary = {
+      totalPayments,
+      totalRevenue,
+      completedPayments,
+      completedRevenue,
+      pendingPayments,
+      pendingRevenue,
+      failedPayments,
+      failedRevenue,
+      refundedPayments,
+      refundedRevenue,
+      successRate,
+      avgPaymentValue,
+      previousTotalRevenue,
+      revenueChange,
+    };
+
+    // Store in cache
+    await this.cacheManager.set(cacheKey, result, this.CACHE_TTL);
+
+    return result;
+  }
+
+  /**
+   * Get pending payments list
+   */
+  async getPendingPayments(
+    companyId: string,
+    userId: string,
+    storeId?: string,
+    limit: number = 20,
+  ): Promise<PendingPayment[]> {
+    await this.checkCompanyAccess(companyId, userId);
+
+    const storeIds = storeId
+      ? [storeId]
+      : await this.getCompanyStoreIds(companyId);
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        storeId: { in: storeIds },
+        status: { in: ['pending', 'on-hold'] },
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        customerName: true,
+        customerEmail: true,
+        total: true,
+        paymentMethod: true,
+        orderDate: true,
+        store: {
+          select: { name: true },
+        },
+      },
+      orderBy: { orderDate: 'asc' },
+      take: limit,
+    });
+
+    const now = new Date();
+
+    return orders.map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      customerName: o.customerName,
+      customerEmail: o.customerEmail,
+      total: Number(o.total),
+      paymentMethod: o.paymentMethod,
+      orderDate: o.orderDate,
+      storeName: o.store.name,
+      daysPending: Math.floor((now.getTime() - o.orderDate.getTime()) / (1000 * 60 * 60 * 24)),
+    }));
   }
 }

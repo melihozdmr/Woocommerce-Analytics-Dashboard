@@ -176,4 +176,46 @@ export class OrderController {
       storeId,
     );
   }
+
+  /**
+   * Get payment summary (KPIs)
+   * GET /companies/:companyId/orders/payments/summary
+   */
+  @Get('payments/summary')
+  async getPaymentSummary(
+    @Param('companyId') companyId: string,
+    @Request() req: any,
+    @Query('period') period?: string,
+    @Query('storeId') storeId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.orderService.getPaymentSummary(
+      companyId,
+      req.user.sub,
+      period,
+      storeId,
+      startDate,
+      endDate,
+    );
+  }
+
+  /**
+   * Get pending payments list
+   * GET /companies/:companyId/orders/payments/pending
+   */
+  @Get('payments/pending')
+  async getPendingPayments(
+    @Param('companyId') companyId: string,
+    @Request() req: any,
+    @Query('storeId') storeId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.orderService.getPendingPayments(
+      companyId,
+      req.user.sub,
+      storeId,
+      limit ? parseInt(limit, 10) : undefined,
+    );
+  }
 }
