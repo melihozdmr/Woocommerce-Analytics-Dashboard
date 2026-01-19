@@ -84,11 +84,11 @@ export class PlanService {
     // Get store count for the user (through company memberships)
     const storeCount = await this.getUserStoreCount(userId);
 
-    // If pricing is disabled, return unlimited access
+    // If pricing is disabled, return unlimited access but keep user's actual plan
     if (!pricingEnabled) {
-      const freePlan = await this.getPlanByType(PlanType.FREE);
+      const plan = user.plan || (await this.getPlanByType(PlanType.FREE));
       return {
-        plan: freePlan!,
+        plan: plan!,
         isGrandfathered: false,
         storeCount,
         storeLimit: 999, // Unlimited when pricing is off
