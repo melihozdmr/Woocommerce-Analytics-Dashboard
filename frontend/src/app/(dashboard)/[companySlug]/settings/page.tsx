@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Settings, Building2, Users, CreditCard, Bell, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/components/providers/CompanyProvider';
+import { usePricingStore } from '@/stores/pricingStore';
 
 const settingsSections = [
   {
@@ -11,35 +13,50 @@ const settingsSections = [
     description: 'Şirket adı, logo ve genel ayarlar',
     icon: Building2,
     href: 'settings/company',
+    requiresPricing: false,
   },
   {
     title: 'Takım Üyeleri',
     description: 'Kullanıcıları ve rollerini yönetin',
     icon: Users,
     href: 'settings/team',
+    requiresPricing: false,
   },
   {
     title: 'Abonelik',
     description: 'Plan ve ödeme bilgileriniz',
     icon: CreditCard,
     href: 'settings/billing',
+    requiresPricing: true,
   },
   {
     title: 'Bildirimler',
     description: 'E-posta ve uygulama bildirimleri',
     icon: Bell,
     href: 'settings/notifications',
+    requiresPricing: false,
   },
   {
     title: 'API Erişimi',
     description: 'Harici API anahtarları ve erişim yönetimi',
     icon: Key,
     href: 'settings/api',
+    requiresPricing: false,
   },
 ];
 
 export default function SettingsPage() {
   const { company } = useCompany();
+  const { isPricingEnabled, fetchPricingStatus } = usePricingStore();
+
+  useEffect(() => {
+    fetchPricingStatus();
+  }, [fetchPricingStatus]);
+
+  // Filter sections based on pricing status
+  const visibleSections = settingsSections.filter(
+    (section) => !section.requiresPricing || isPricingEnabled
+  );
 
   return (
     <div className="space-y-6">
@@ -51,7 +68,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {settingsSections.map((section) => (
+        {visibleSections.map((section) => (
           <Card key={section.title} className="cursor-pointer hover:bg-muted/50 transition-colors">
             <CardHeader className="flex flex-row items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
