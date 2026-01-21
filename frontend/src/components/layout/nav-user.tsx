@@ -32,6 +32,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/stores/authStore';
+import { usePricingStore } from '@/stores/pricingStore';
 
 export function NavUser({
   user,
@@ -45,6 +46,7 @@ export function NavUser({
   const router = useRouter();
   const { isMobile } = useSidebar();
   const { logout } = useAuthStore();
+  const { isPricingEnabled } = usePricingStore();
 
   const getInitials = (name: string, email: string) => {
     if (name) {
@@ -104,23 +106,29 @@ export function NavUser({
                 </div>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
-                <Sparkles />
-                Pro'ya Yükselt
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
+            {isPricingEnabled && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
+                    <Sparkles />
+                    Pro'ya Yükselt
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={() => router.push('/settings')}>
                 <BadgeCheck />
                 Hesap
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
-                <CreditCard />
-                Faturalandırma
-              </DropdownMenuItem>
+              {isPricingEnabled && (
+                <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
+                  <CreditCard />
+                  Faturalandırma
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => router.push('/notifications')}>
                 <Bell />
                 Bildirimler

@@ -50,6 +50,7 @@ import {
 import { api } from '@/services/api';
 import { useCompanyStore, Company } from '@/stores/companyStore';
 import { useAuthStore } from '@/stores/authStore';
+import { usePricingStore } from '@/stores/pricingStore';
 
 interface TeamMember {
   email: string;
@@ -67,6 +68,12 @@ export function TeamSwitcher() {
     fetchCompanies,
     switchCompany,
   } = useCompanyStore();
+  const { isPricingEnabled, fetchPricingStatus } = usePricingStore();
+
+  // Fetch pricing status on mount
+  React.useEffect(() => {
+    fetchPricingStatus();
+  }, [fetchPricingStatus]);
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [companyName, setCompanyName] = React.useState('');
@@ -208,9 +215,11 @@ export function TeamSwitcher() {
                   <span className="truncate font-semibold">
                     {currentCompany?.name || 'Şirket Seçin'}
                   </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {user?.plan?.displayName || 'Free'} Plan
-                  </span>
+                  {isPricingEnabled && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {user?.plan?.displayName || 'Free'} Plan
+                    </span>
+                  )}
                 </div>
                 <ChevronsUpDown className="ml-auto" />
               </SidebarMenuButton>

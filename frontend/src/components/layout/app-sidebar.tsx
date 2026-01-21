@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/stores/authStore';
 import { useCompanyStore } from '@/stores/companyStore';
+import { usePricingStore } from '@/stores/pricingStore';
 
 const navSecondary = [
   {
@@ -45,11 +46,12 @@ const navSecondary = [
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuthStore();
   const { currentCompany } = useCompanyStore();
+  const { isPricingEnabled } = usePricingStore();
 
   const companySlug = currentCompany?.slug || '';
 
   // Build navigation with company-scoped URLs
-  const navMain = [
+  const allNavItems = [
     {
       title: 'Dashboard',
       url: `/${companySlug}`,
@@ -91,11 +93,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: `/${companySlug}/refunds`,
       icon: RotateCcw,
     },
-    {
+    ...(isPricingEnabled ? [{
       title: 'Planlar',
       url: `/${companySlug}/pricing`,
       icon: Crown,
-    },
+    }] : []),
     {
       title: 'Ayarlar',
       url: `/${companySlug}/settings`,
@@ -103,10 +105,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items: [
         { title: 'Genel', url: `/${companySlug}/settings` },
         { title: 'Takım', url: `/${companySlug}/settings/team` },
-        { title: 'Faturalandırma', url: `/${companySlug}/settings/billing` },
+        ...(isPricingEnabled ? [{ title: 'Faturalandırma', url: `/${companySlug}/settings/billing` }] : []),
       ],
     },
   ];
+
+  const navMain = allNavItems;
 
   const userData = {
     name: user?.name || 'Kullanıcı',
