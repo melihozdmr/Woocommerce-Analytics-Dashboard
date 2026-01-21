@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Put,
   Delete,
   Body,
   Param,
@@ -10,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { CompanyService } from './company.service';
-import { CreateCompanyDto, InviteMemberDto } from './dto';
+import { CreateCompanyDto, UpdateCompanyDto, InviteMemberDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('company')
@@ -44,6 +45,17 @@ export class CompanyController {
     @CurrentUser('id') userId: string,
   ) {
     return this.companyService.getCompany(companyId, userId);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Şirket bilgilerini güncelle' })
+  @ApiResponse({ status: 200, description: 'Şirket güncellendi' })
+  async updateCompany(
+    @Param('id') companyId: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateCompanyDto,
+  ) {
+    return this.companyService.updateCompany(companyId, userId, dto);
   }
 
   @Get(':id/members')

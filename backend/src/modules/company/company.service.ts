@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { EmailService } from '../email/email.service';
-import { CreateCompanyDto, InviteMemberDto } from './dto';
+import { CreateCompanyDto, UpdateCompanyDto, InviteMemberDto } from './dto';
 import { randomUUID } from 'crypto';
 import { CompanyRole, InviteStatus } from '@prisma/client';
 
@@ -115,6 +115,56 @@ export class CompanyService {
     }
 
     return company;
+  }
+
+  async updateCompany(companyId: string, userId: string, dto: UpdateCompanyDto) {
+    // Check if user has permission (owner or admin)
+    const membership = await this.prisma.companyMember.findFirst({
+      where: {
+        companyId,
+        userId,
+        inviteStatus: InviteStatus.ACCEPTED,
+        role: { in: [CompanyRole.OWNER, CompanyRole.ADMIN] },
+      },
+    });
+
+    if (!membership) {
+      throw new ForbiddenException('Şirket bilgilerini güncelleme yetkiniz yok');
+    }
+
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+
+    if (!company) {
+      throw new NotFoundException('Şirket bulunamadı');
+    }
+
+    // If name is being updated, check if new slug would be unique
+    let newSlug = company.slug;
+    if (dto.name && dto.name !== company.name) {
+      newSlug = this.generateSlug(dto.name);
+      let slugExists = await this.prisma.company.findFirst({
+        where: { slug: newSlug, id: { not: companyId } },
+      });
+      let counter = 1;
+      while (slugExists) {
+        newSlug = `${this.generateSlug(dto.name)}-${counter}`;
+        slugExists = await this.prisma.company.findFirst({
+          where: { slug: newSlug, id: { not: companyId } },
+        });
+        counter++;
+      }
+    }
+
+    const updatedCompany = await this.prisma.company.update({
+      where: { id: companyId },
+      data: {
+        ...(dto.name && { name: dto.name, slug: newSlug }),
+      },
+    });
+
+    return updatedCompany;
   }
 
   async getUserCompanies(userId: string) {

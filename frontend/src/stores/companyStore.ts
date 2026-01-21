@@ -18,6 +18,7 @@ interface CompanyState {
   fetchCompanies: () => Promise<void>;
   switchCompany: (companyId: string) => Promise<void>;
   createCompany: (name: string) => Promise<Company>;
+  updateCompany: (companyId: string, data: { name: string }) => Promise<Company | null>;
   setCurrentCompany: (company: Company | null) => void;
 }
 
@@ -106,6 +107,36 @@ export const useCompanyStore = create<CompanyState>((set) => ({
         isLoading: false,
       });
       throw error;
+    }
+  },
+
+  updateCompany: async (companyId: string, data: { name: string }) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await api.put(`/company/${companyId}`, data);
+      const updatedCompany = response.data;
+
+      // Update in companies list and current company
+      set((state) => ({
+        companies: state.companies.map((c) =>
+          c.id === companyId
+            ? { ...c, name: updatedCompany.name, slug: updatedCompany.slug }
+            : c
+        ),
+        currentCompany:
+          state.currentCompany?.id === companyId
+            ? { ...state.currentCompany, name: updatedCompany.name, slug: updatedCompany.slug }
+            : state.currentCompany,
+        isLoading: false,
+      }));
+
+      return updatedCompany;
+    } catch (error: any) {
+      set({
+        error: error.response?.data?.message || 'Şirket güncellenemedi',
+        isLoading: false,
+      });
+      return null;
     }
   },
 
