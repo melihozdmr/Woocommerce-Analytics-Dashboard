@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Put,
   Body,
   HttpCode,
   HttpStatus,
@@ -14,6 +15,7 @@ import {
   RefreshTokenDto,
   ForgotPasswordDto,
   ResetPasswordDto,
+  UpdateProfileDto,
 } from './dto';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -118,5 +120,18 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Yetkisiz erişim' })
   async getMe(@CurrentUser('id') userId: string) {
     return this.authService.getMe(userId);
+  }
+
+  @Put('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Profil güncelle' })
+  @ApiResponse({ status: 200, description: 'Profil güncellendi' })
+  @ApiResponse({ status: 400, description: 'Geçersiz veri' })
+  @ApiResponse({ status: 401, description: 'Yetkisiz erişim' })
+  async updateProfile(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(userId, dto);
   }
 }

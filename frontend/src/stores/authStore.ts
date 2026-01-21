@@ -34,6 +34,7 @@ interface AuthState {
   logout: () => Promise<void>;
   refreshTokens: () => Promise<boolean>;
   checkAuth: () => Promise<void>;
+  updateProfile: (data: { name?: string; currentPassword?: string; newPassword?: string }) => Promise<boolean>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -186,6 +187,23 @@ export const useAuthStore = create<AuthState>()(
           if (!refreshed) {
             set({ isLoading: false });
           }
+        }
+      },
+
+      updateProfile: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.put('/auth/profile', data);
+          set({
+            user: response.data,
+            isLoading: false,
+            error: null,
+          });
+          return true;
+        } catch (error: any) {
+          const message = error.response?.data?.message || 'Profil güncellenemedi';
+          set({ isLoading: false, error: message });
+          return false;
         }
       },
     }),

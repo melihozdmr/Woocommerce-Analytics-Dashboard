@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { EmailService } from '../email/email.service';
-import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, UpdateProfileDto } from './dto';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -403,6 +403,57 @@ export class AuthService {
       plan: user.plan,
       currentCompanyId: user.currentCompanyId,
       createdAt: user.createdAt,
+    };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { plan: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Kullanıcı bulunamadı');
+    }
+
+    const updateData: any = {};
+
+    // Update name if provided
+    if (dto.name !== undefined) {
+      updateData.name = dto.name;
+    }
+
+    // Update password if provided
+    if (dto.newPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Mevcut şifre gereklidir');
+      }
+
+      const isPasswordValid = await bcrypt.compare(dto.currentPassword, user.password);
+      if (!isPasswordValid) {
+        throw new BadRequestException('Mevcut şifre hatalı');
+      }
+
+      updateData.password = await bcrypt.hash(dto.newPassword, 12);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new BadRequestException('Güncellenecek alan bulunamadı');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      include: { plan: true },
+    });
+
+    return {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      plan: updatedUser.plan,
+      currentCompanyId: updatedUser.currentCompanyId,
     };
   }
 

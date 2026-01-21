@@ -89,11 +89,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: 'Ayarlar',
       url: `/${companySlug}/settings`,
       icon: Settings,
-      items: [
-        { title: 'Genel', url: `/${companySlug}/settings` },
-        { title: 'Takım', url: `/${companySlug}/settings/team` },
-        ...(isPricingEnabled ? [{ title: 'Faturalandırma', url: `/${companySlug}/settings/billing` }] : []),
-      ],
     },
   ];
 

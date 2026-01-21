@@ -2,10 +2,9 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, Building2, Users, CreditCard, Bell, Key, ChevronRight } from 'lucide-react';
+import { Settings, Building2, Users, CreditCard, Bell, Key, User } from 'lucide-react';
 import { useCompany } from '@/components/providers/CompanyProvider';
 import { usePricingStore } from '@/stores/pricingStore';
-import { cn } from '@/lib/utils';
 
 const settingsSections = [
   {
@@ -20,6 +19,13 @@ const settingsSections = [
     description: 'Kullanıcıları ve rollerini yönetin',
     icon: Users,
     href: 'settings/team',
+    requiresPricing: false,
+  },
+  {
+    title: 'Profil',
+    description: 'Kişisel bilgilerinizi düzenleyin',
+    icon: User,
+    href: 'settings/profile',
     requiresPricing: false,
   },
   {
@@ -73,27 +79,21 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Settings List */}
-      <div>
+      {/* Settings Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2">
         {visibleSections.map((section, index) => (
           <div
             key={section.title}
-            className={cn(
-              'flex items-center justify-between px-4 py-4 cursor-pointer transition-colors hover:bg-muted/50 border-b',
-              index % 2 === 1 && 'bg-muted/30'
-            )}
+            className={`flex items-center gap-4 px-4 py-4 cursor-pointer transition-colors hover:bg-muted/30 border-b ${index % 2 === 0 ? 'md:border-r' : ''}`}
             onClick={() => handleSectionClick(section.href)}
           >
-            <div className="flex items-center gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                <section.icon className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{section.title}</p>
-                <p className="text-xs text-muted-foreground">{section.description}</p>
-              </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+              <section.icon className="h-6 w-6 text-muted-foreground" />
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">{section.title}</p>
+              <p className="text-xs text-muted-foreground">{section.description}</p>
+            </div>
           </div>
         ))}
       </div>
