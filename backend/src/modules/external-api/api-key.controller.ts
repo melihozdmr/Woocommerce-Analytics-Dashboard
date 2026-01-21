@@ -19,6 +19,7 @@ import { ApiKeyService } from './api-key.service';
 import { CreateApiKeyDto } from './dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../database/prisma.service';
+import { PricingService } from '../pricing/pricing.service';
 
 @ApiTags('API Key Management')
 @Controller('settings/api-keys')
@@ -27,10 +28,12 @@ export class ApiKeyController {
   constructor(
     private readonly apiKeyService: ApiKeyService,
     private readonly prisma: PrismaService,
+    private readonly pricingService: PricingService,
   ) {}
 
   /**
    * Check if user has Enterprise plan and get company ID
+   * Skips plan check if pricing is disabled
    */
   private async validateEnterpriseAccess(userId: string): Promise<string> {
     const user = await this.prisma.user.findUnique({
@@ -38,13 +41,19 @@ export class ApiKeyController {
       include: { plan: true },
     });
 
-    if (!user?.plan || user.plan.name !== 'ENTERPRISE') {
-      throw new ForbiddenException(
-        'External API access requires Enterprise plan',
-      );
+    // Check if pricing is enabled
+    const isPricingEnabled = await this.pricingService.isPricingEnabled();
+
+    // If pricing is enabled, check for Enterprise plan
+    if (isPricingEnabled) {
+      if (!user?.plan || user.plan.name !== 'ENTERPRISE') {
+        throw new ForbiddenException(
+          'External API access requires Enterprise plan',
+        );
+      }
     }
 
-    if (!user.currentCompanyId) {
+    if (!user?.currentCompanyId) {
       throw new ForbiddenException('No company selected');
     }
 

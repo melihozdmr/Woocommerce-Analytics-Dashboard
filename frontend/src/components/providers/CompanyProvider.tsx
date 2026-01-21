@@ -8,11 +8,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface CompanyContextType {
   company: Company | null;
   isLoading: boolean;
+  refreshCompany: () => Promise<void>;
 }
 
 const CompanyContext = createContext<CompanyContextType>({
   company: null,
   isLoading: true,
+  refreshCompany: async () => {},
 });
 
 export function useCompany() {
@@ -110,6 +112,11 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
   }, [companySlug, companies, storeLoading, currentCompany, router, initialFetchDone]);
 
+  // Function to refresh company data
+  const refreshCompany = async () => {
+    await fetchCompanies();
+  };
+
   // Show loading until initial fetch is done and validation completes
   if (!initialFetchDone || storeLoading || isValidating) {
     return <CompanyLoadingSkeleton />;
@@ -120,7 +127,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <CompanyContext.Provider value={{ company: validatedCompany, isLoading: false }}>
+    <CompanyContext.Provider value={{ company: validatedCompany, isLoading: false, refreshCompany }}>
       {children}
     </CompanyContext.Provider>
   );

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Key,
+  ChevronLeft,
   Plus,
   Copy,
   Trash2,
@@ -15,23 +16,9 @@ import {
   CheckCircle2,
   Clock,
   Activity,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -63,6 +50,7 @@ import { usePricingStore } from '@/stores/pricingStore';
 import { useCompany } from '@/components/providers/CompanyProvider';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export default function ApiSettingsPage() {
   const router = useRouter();
@@ -81,7 +69,7 @@ export default function ApiSettingsPage() {
     clearNewKeySecret,
   } = useApiKeyStore();
 
-  const { myPlan, hasFeature, fetchMyPlan, isPricingEnabled } = usePricingStore();
+  const { hasFeature, fetchMyPlan, isPricingEnabled } = usePricingStore();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
@@ -97,10 +85,11 @@ export default function ApiSettingsPage() {
   }, [fetchMyPlan]);
 
   useEffect(() => {
-    if (hasApiAccess) {
+    // Only fetch API keys if pricing is disabled or user has access
+    if (!isPricingEnabled || hasApiAccess) {
       fetchApiKeys();
     }
-  }, [hasApiAccess, fetchApiKeys]);
+  }, [hasApiAccess, isPricingEnabled, fetchApiKeys]);
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
@@ -113,7 +102,6 @@ export default function ApiSettingsPage() {
     if (result) {
       setNewKeyName('');
       setWritePermission(false);
-      // Keep dialog open to show the key
     }
   };
 
@@ -143,51 +131,63 @@ export default function ApiSettingsPage() {
   // Enterprise plan required screen
   if (!hasApiAccess && isPricingEnabled) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">API Erişimi</h1>
-          <p className="text-muted-foreground">
-            Harici API erişimi ve API anahtarı yönetimi
-          </p>
+      <>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => router.push(`/${company?.slug}/settings`)}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Key className="h-5 w-5 text-muted-foreground" />
+            <h1 className="text-lg font-semibold">API Erişimi</h1>
+          </div>
         </div>
 
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
-              <AlertTriangle className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold">Enterprise Plan Gerekli</h3>
-            <p className="mt-2 text-center text-muted-foreground max-w-md">
-              Harici API erişimi ve API anahtarı yönetimi Enterprise plan ile
-              kullanılabilir. Plan yükseltmek için fiyatlandırma sayfasını
-              ziyaret edin.
-            </p>
-            <Button
-              className="mt-6"
-              onClick={() => router.push(`/${company?.slug}/pricing`)}
-            >
-              Planları Görüntüle
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h3 className="mt-4 text-lg font-semibold">Enterprise Plan Gerekli</h3>
+          <p className="mt-2 text-center text-muted-foreground max-w-md px-4">
+            Harici API erişimi ve API anahtarı yönetimi Enterprise plan ile
+            kullanılabilir.
+          </p>
+          <Button
+            className="mt-6"
+            onClick={() => router.push(`/${company?.slug}/pricing`)}
+          >
+            Planları Görüntüle
+          </Button>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">API Erişimi</h1>
-          <p className="text-muted-foreground">
-            Harici API erişimi için API anahtarlarınızı yönetin
-          </p>
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => router.push(`/${company?.slug}/settings`)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <Key className="h-5 w-5 text-muted-foreground" />
+          <h1 className="text-lg font-semibold">API Erişimi</h1>
         </div>
-
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
+            <Button size="sm">
+              <Plus className="h-4 w-4 mr-2" />
               Yeni API Anahtarı
             </Button>
           </DialogTrigger>
@@ -288,7 +288,14 @@ export default function ApiSettingsPage() {
                     onClick={handleCreateKey}
                     disabled={!newKeyName.trim() || isCreating}
                   >
-                    {isCreating ? 'Oluşturuluyor...' : 'Oluştur'}
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Oluşturuluyor...
+                      </>
+                    ) : (
+                      'Oluştur'
+                    )}
                   </Button>
                 </DialogFooter>
               </div>
@@ -298,33 +305,29 @@ export default function ApiSettingsPage() {
       </div>
 
       {error && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div className="px-4 py-3 border-b">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
       )}
 
-      {/* API Documentation Link */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">API Dokümantasyonu</CardTitle>
-          <CardDescription>
-            API kullanımı hakkında detaylı bilgi için Swagger dokümantasyonuna
-            bakabilirsiniz.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground">
-                <strong>Base URL:</strong>{' '}
-                <code className="bg-muted px-2 py-1 rounded">
-                  {process.env.NEXT_PUBLIC_API_URL}/api/v1
-                </code>
-              </p>
-            </div>
+      {/* API Documentation */}
+      <div className="border-b">
+        <div className="grid grid-cols-12 items-center px-4 py-4">
+          <div className="col-span-3">
+            <p className="text-sm font-medium">Base URL</p>
+          </div>
+          <div className="col-span-6">
+            <code className="bg-muted px-2 py-1 rounded text-sm">
+              {process.env.NEXT_PUBLIC_API_URL}/api/v1
+            </code>
+          </div>
+          <div className="col-span-3 text-right">
             <Button
               variant="outline"
+              size="sm"
               onClick={() =>
                 window.open(
                   `${process.env.NEXT_PUBLIC_API_URL}/api/docs`,
@@ -335,119 +338,111 @@ export default function ApiSettingsPage() {
               Swagger Docs
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* API Keys Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>API Anahtarları</CardTitle>
-          <CardDescription>
-            Mevcut API anahtarlarınızı görüntüleyin ve yönetin
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : apiKeys.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Key className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">
-                Henüz API anahtarı yok
-              </h3>
-              <p className="mt-2 text-center text-muted-foreground">
-                Harici API erişimi için bir API anahtarı oluşturun.
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ad</TableHead>
-                  <TableHead>Anahtar</TableHead>
-                  <TableHead>İzinler</TableHead>
-                  <TableHead>Son Kullanım</TableHead>
-                  <TableHead>Durum</TableHead>
-                  <TableHead className="text-right">İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {apiKeys.map((apiKey) => (
-                  <ApiKeyRow
-                    key={apiKey.id}
-                    apiKey={apiKey}
-                    onDelete={deleteApiKey}
-                    onRevoke={revokeApiKey}
-                    onRotate={rotateApiKey}
-                    formatDate={formatDate}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Rate Limiting Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Rate Limiting</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900">
-                <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="font-medium">100 istek/dakika</p>
-                <p className="text-sm text-muted-foreground">
-                  API key başına limit
-                </p>
-              </div>
+      <div className="border-b">
+        <div className="px-4 py-2 bg-muted/50">
+          <span className="text-xs font-medium text-muted-foreground">
+            Rate Limiting
+          </span>
+        </div>
+        <div className="grid grid-cols-3 divide-x">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <Activity className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900">
-                <Clock className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="font-medium">60 saniye</p>
-                <p className="text-sm text-muted-foreground">
-                  Limit sıfırlama süresi
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900">
-                <Key className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="font-medium">X-RateLimit-*</p>
-                <p className="text-sm text-muted-foreground">
-                  Response header&apos;ları
-                </p>
-              </div>
+            <div>
+              <p className="text-sm font-medium">100 istek/dk</p>
+              <p className="text-xs text-muted-foreground">API key başına</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">60 saniye</p>
+              <p className="text-xs text-muted-foreground">Sıfırlama süresi</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+              <Key className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">X-RateLimit-*</p>
+              <p className="text-xs text-muted-foreground">Response headers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* API Keys Section Header */}
+      <div className="px-4 py-2 bg-muted/50 border-b">
+        <span className="text-xs font-medium text-muted-foreground">
+          API Anahtarları
+        </span>
+      </div>
+
+      {/* Table Header */}
+      <div className="grid grid-cols-12 px-4 py-2 border-b bg-muted/30">
+        <div className="col-span-3 text-xs font-medium text-muted-foreground">Ad</div>
+        <div className="col-span-2 text-xs font-medium text-muted-foreground">Anahtar</div>
+        <div className="col-span-2 text-xs font-medium text-muted-foreground">İzinler</div>
+        <div className="col-span-2 text-xs font-medium text-muted-foreground">Son Kullanım</div>
+        <div className="col-span-2 text-xs font-medium text-muted-foreground">Durum</div>
+        <div className="col-span-1 text-xs font-medium text-muted-foreground text-right">İşlem</div>
+      </div>
+
+      {/* API Keys List */}
+      <div>
+        {isLoading ? (
+          <div className="p-4 space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full" />
+            ))}
+          </div>
+        ) : apiKeys.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Key className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="mt-4 text-lg font-medium">Henüz API anahtarı yok</h3>
+            <p className="text-muted-foreground text-center mt-1">
+              Harici API erişimi için bir API anahtarı oluşturun
+            </p>
+          </div>
+        ) : (
+          apiKeys.map((apiKey, index) => (
+            <ApiKeyRow
+              key={apiKey.id}
+              apiKey={apiKey}
+              index={index}
+              onDelete={deleteApiKey}
+              onRevoke={revokeApiKey}
+              onRotate={rotateApiKey}
+              formatDate={formatDate}
+            />
+          ))
+        )}
+      </div>
+    </>
   );
 }
 
 // Separate component for each API key row
 function ApiKeyRow({
   apiKey,
+  index,
   onDelete,
   onRevoke,
   onRotate,
   formatDate,
 }: {
   apiKey: ApiKey;
+  index: number;
   onDelete: (id: string) => Promise<boolean>;
   onRevoke: (id: string) => Promise<boolean>;
   onRotate: (id: string) => Promise<any>;
@@ -490,45 +485,58 @@ function ApiKeyRow({
   };
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">{apiKey.name}</TableCell>
-      <TableCell>
-        <code className="bg-muted px-2 py-1 rounded text-sm">
+    <div
+      className={cn(
+        'grid grid-cols-12 items-center px-4 py-3 border-b',
+        index % 2 === 1 && 'bg-muted/30'
+      )}
+    >
+      <div className="col-span-3">
+        <p className="text-sm font-medium">{apiKey.name}</p>
+      </div>
+      <div className="col-span-2">
+        <code className="bg-muted px-2 py-1 rounded text-xs">
           {apiKey.keyPrefix}...
         </code>
-      </TableCell>
-      <TableCell>
+      </div>
+      <div className="col-span-2">
         <div className="flex gap-1">
-          <Badge variant="outline">Okuma</Badge>
+          <Badge variant="outline" className="text-xs">Okuma</Badge>
           {apiKey.permissions?.write && (
-            <Badge variant="secondary">Yazma</Badge>
+            <Badge variant="secondary" className="text-xs">Yazma</Badge>
           )}
         </div>
-      </TableCell>
-      <TableCell className="text-muted-foreground">
-        {formatDate(apiKey.lastUsedAt)}
-      </TableCell>
-      <TableCell>
+      </div>
+      <div className="col-span-2">
+        <p className="text-sm text-muted-foreground">
+          {formatDate(apiKey.lastUsedAt)}
+        </p>
+      </div>
+      <div className="col-span-2">
         {apiKey.isActive ? (
-          <Badge variant="default" className="bg-green-500">
+          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
             Aktif
-          </Badge>
+          </span>
         ) : (
-          <Badge variant="secondary">İptal Edildi</Badge>
+          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+            İptal Edildi
+          </span>
         )}
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-2">
+      </div>
+      <div className="col-span-1 text-right">
+        <div className="flex justify-end gap-1">
           {/* Rotate Dialog */}
           <Dialog>
             <DialogTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
+                className="h-8 w-8"
                 disabled={!apiKey.isActive}
                 title="Yenile"
               >
-                <RotateCcw className="h-4 w-4" />
+                <RotateCcw className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -607,8 +615,8 @@ function ApiKeyRow({
           {apiKey.isActive && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" title="İptal Et">
-                  <Ban className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="İptal Et">
+                  <Ban className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -616,7 +624,6 @@ function ApiKeyRow({
                   <AlertDialogTitle>API Anahtarını İptal Et</AlertDialogTitle>
                   <AlertDialogDescription>
                     Bu API anahtarı iptal edilecek ve artık kullanılamayacak.
-                    İsterseniz daha sonra silebilirsiniz.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -635,8 +642,8 @@ function ApiKeyRow({
           {/* Delete Button */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" title="Sil">
-                <Trash2 className="h-4 w-4 text-red-500" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Sil">
+                <Trash2 className="h-4 w-4 text-muted-foreground" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -660,7 +667,7 @@ function ApiKeyRow({
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </TableCell>
-    </TableRow>
+      </div>
+    </div>
   );
 }

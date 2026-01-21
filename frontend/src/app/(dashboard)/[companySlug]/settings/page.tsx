@@ -2,11 +2,10 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, Building2, Users, CreditCard, Bell, Key } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Settings, Building2, Users, CreditCard, Bell, Key, ChevronRight } from 'lucide-react';
 import { useCompany } from '@/components/providers/CompanyProvider';
 import { usePricingStore } from '@/stores/pricingStore';
+import { cn } from '@/lib/utils';
 
 const settingsSections = [
   {
@@ -65,33 +64,39 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Ayarlar</h1>
-        <p className="text-muted-foreground">
-          {company?.name} - Şirket ve hesap ayarlarınızı yönetin
-        </p>
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <div className="flex items-center gap-2">
+          <Settings className="h-5 w-5 text-muted-foreground" />
+          <h1 className="text-lg font-semibold">Ayarlar</h1>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {visibleSections.map((section) => (
-          <Card
+      {/* Settings List */}
+      <div>
+        {visibleSections.map((section, index) => (
+          <div
             key={section.title}
-            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            className={cn(
+              'flex items-center justify-between px-4 py-4 cursor-pointer transition-colors hover:bg-muted/50 border-b',
+              index % 2 === 1 && 'bg-muted/30'
+            )}
             onClick={() => handleSectionClick(section.href)}
           >
-            <CardHeader className="flex flex-row items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <section.icon className="h-6 w-6 text-primary" />
+            <div className="flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                <section.icon className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <CardTitle className="text-lg">{section.title}</CardTitle>
-                <CardDescription>{section.description}</CardDescription>
+                <p className="text-sm font-medium">{section.title}</p>
+                <p className="text-xs text-muted-foreground">{section.description}</p>
               </div>
-            </CardHeader>
-          </Card>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }

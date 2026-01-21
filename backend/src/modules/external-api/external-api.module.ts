@@ -5,9 +5,10 @@ import { ExternalApiController } from './external-api.controller';
 import { ApiKeyGuard } from './guards/api-key.guard';
 import { ApiRateLimitGuard } from './guards/api-rate-limit.guard';
 import { DatabaseModule } from '../../database/database.module';
+import { PricingModule } from '../pricing/pricing.module';
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [DatabaseModule, PricingModule],
   controllers: [ApiKeyController, ExternalApiController],
   providers: [ApiKeyService, ApiKeyGuard, ApiRateLimitGuard],
   exports: [ApiKeyService],

@@ -161,6 +161,7 @@ export class CompanyService {
       where: { id: companyId },
       data: {
         ...(dto.name && { name: dto.name, slug: newSlug }),
+        ...(dto.logo !== undefined && { logo: dto.logo }),
       },
     });
 

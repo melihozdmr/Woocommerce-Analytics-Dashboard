@@ -6,6 +6,7 @@ export interface Company {
   id: string;
   name: string;
   slug: string;
+  logo?: string;
   role: 'OWNER' | 'ADMIN' | 'MEMBER';
   createdAt: string;
 }
@@ -18,7 +19,7 @@ interface CompanyState {
   fetchCompanies: () => Promise<void>;
   switchCompany: (companyId: string) => Promise<void>;
   createCompany: (name: string) => Promise<Company>;
-  updateCompany: (companyId: string, data: { name: string }) => Promise<Company | null>;
+  updateCompany: (companyId: string, data: { name?: string; logo?: string }) => Promise<Company | null>;
   setCurrentCompany: (company: Company | null) => void;
 }
 
@@ -110,7 +111,7 @@ export const useCompanyStore = create<CompanyState>((set) => ({
     }
   },
 
-  updateCompany: async (companyId: string, data: { name: string }) => {
+  updateCompany: async (companyId: string, data: { name?: string; logo?: string }) => {
     set({ isLoading: true, error: null });
     try {
       const response = await api.put(`/company/${companyId}`, data);
@@ -120,12 +121,12 @@ export const useCompanyStore = create<CompanyState>((set) => ({
       set((state) => ({
         companies: state.companies.map((c) =>
           c.id === companyId
-            ? { ...c, name: updatedCompany.name, slug: updatedCompany.slug }
+            ? { ...c, name: updatedCompany.name, slug: updatedCompany.slug, logo: updatedCompany.logo }
             : c
         ),
         currentCompany:
           state.currentCompany?.id === companyId
-            ? { ...state.currentCompany, name: updatedCompany.name, slug: updatedCompany.slug }
+            ? { ...state.currentCompany, name: updatedCompany.name, slug: updatedCompany.slug, logo: updatedCompany.logo }
             : state.currentCompany,
         isLoading: false,
       }));

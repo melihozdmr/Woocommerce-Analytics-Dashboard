@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, ChevronLeft, Save, Loader2 } from 'lucide-react';
+import { Building2, ChevronLeft, Save, Loader2, Camera, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,21 +15,70 @@ export default function CompanySettingsPage() {
   const { company, refreshCompany } = useCompany();
   const { updateCompany, isLoading: isUpdating } = useCompanyStore();
   const [name, setName] = useState('');
+  const [logo, setLogo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (company) {
       setName(company.name);
+      setLogo(company.logo || null);
       setIsLoading(false);
     }
   }, [company]);
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Lütfen geçerli bir görsel dosyası seçin');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Dosya boyutu 2MB\'dan küçük olmalıdır');
+      return;
+    }
+
+    // Convert to base64
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogo(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogo(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!company?.id || !name.trim()) return;
+    if (!company?.id) return;
 
-    const result = await updateCompany(company.id, { name: name.trim() });
+    const updateData: { name?: string; logo?: string } = {};
+
+    if (name.trim() && name !== company.name) {
+      updateData.name = name.trim();
+    }
+
+    if (logo !== (company.logo || null)) {
+      updateData.logo = logo || '';
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      toast.info('Değişiklik yapılmadı');
+      return;
+    }
+
+    const result = await updateCompany(company.id, updateData);
 
     if (result) {
       toast.success('Şirket bilgileri güncellendi');
@@ -43,7 +92,10 @@ export default function CompanySettingsPage() {
     }
   };
 
-  const hasChanges = company && name !== company.name;
+  const hasChanges = company && (
+    name !== company.name ||
+    logo !== (company.logo || null)
+  );
 
   return (
     <>
@@ -65,6 +117,67 @@ export default function CompanySettingsPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
+        {/* Logo Section */}
+        <div className="border-b">
+          <div className="grid grid-cols-12 items-center px-4 py-4">
+            <div className="col-span-3">
+              <label className="text-sm font-medium">Şirket Logosu</label>
+            </div>
+            <div className="col-span-9">
+              {isLoading ? (
+                <Skeleton className="h-20 w-20 rounded-lg" />
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden border">
+                      {logo ? (
+                        <img
+                          src={logo}
+                          alt="Şirket logosu"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Building2 className="h-8 w-8 text-muted-foreground" />
+                      )}
+                    </div>
+                    {logo && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Logo Yükle
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      PNG, JPG veya GIF, max 2MB
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Name Section */}
         <div className="border-b">
           <div className="grid grid-cols-12 items-center px-4 py-4">
             <div className="col-span-3">
@@ -85,6 +198,7 @@ export default function CompanySettingsPage() {
           </div>
         </div>
 
+        {/* URL Section */}
         <div className="border-b">
           <div className="grid grid-cols-12 items-center px-4 py-4">
             <div className="col-span-3">
@@ -102,6 +216,7 @@ export default function CompanySettingsPage() {
           </div>
         </div>
 
+        {/* Created At Section */}
         <div className="border-b">
           <div className="grid grid-cols-12 items-center px-4 py-4">
             <div className="col-span-3">
