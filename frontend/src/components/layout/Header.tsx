@@ -1,13 +1,26 @@
 'use client';
 
 import { Bell, RefreshCw, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useCompanyStore } from '@/stores/companyStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 
 export function Header() {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const router = useRouter();
+  const { currentCompany } = useCompanyStore();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
+  const companySlug = currentCompany?.slug || '';
+
+  useEffect(() => {
+    if (currentCompany?.id) {
+      fetchUnreadCount(currentCompany.id);
+    }
+  }, [currentCompany?.id, fetchUnreadCount]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -48,14 +61,21 @@ export function Header() {
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => router.push(`/${companySlug}/notifications`)}
+        >
           <Bell className="h-5 w-5" />
-          <Badge
-            variant="destructive"
-            className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
-          >
-            3
-          </Badge>
+          {unreadCount > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Badge>
+          )}
         </Button>
       </div>
     </header>

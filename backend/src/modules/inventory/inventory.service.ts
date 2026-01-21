@@ -250,6 +250,14 @@ export class InventoryService {
             price: true,
             purchasePrice: true,
             productType: true,
+            variations: {
+              where: { isActive: true },
+              select: {
+                stockQuantity: true,
+                price: true,
+                purchasePrice: true,
+              },
+            },
           },
         },
       },
@@ -265,19 +273,36 @@ export class InventoryService {
       const shippingCost = Number(store.shippingCost) || 0;
 
       for (const product of store.products) {
-        if (product.productType === 'simple') {
-          const qty = product.stockQuantity;
-          const price = Number(product.price);
-          const purchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
-          const commission = price * (commissionRate / 100);
-          const profitPerUnit = price - purchasePrice - commission - shippingCost;
+        let effectiveStock: number;
+        let effectivePrice: number;
+        let effectivePurchasePrice: number;
 
-          totalStock += qty;
-          totalStockValue += purchasePrice * qty;
-          netProfit += profitPerUnit * qty;
-
-          if (qty > 0 && qty <= criticalThreshold) criticalStockCount++;
+        // Variable ürünler için varyasyonların stok toplamını al
+        if (product.productType === 'variable' && product.variations.length > 0) {
+          effectiveStock = product.variations.reduce((sum, v) => sum + v.stockQuantity, 0);
+          effectivePrice = product.variations.reduce((sum, v) => sum + Number(v.price), 0) / product.variations.length;
+          // Varyasyonlarda purchasePrice varsa onu kullan, yoksa ürünün purchasePrice'ını
+          const variationsWithPurchasePrice = product.variations.filter(v => v.purchasePrice);
+          if (variationsWithPurchasePrice.length > 0) {
+            effectivePurchasePrice = variationsWithPurchasePrice.reduce((sum, v) => sum + Number(v.purchasePrice), 0) / variationsWithPurchasePrice.length;
+          } else {
+            effectivePurchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
+          }
+        } else {
+          // Simple ürünler veya varyasyonsuz variable ürünler
+          effectiveStock = product.stockQuantity;
+          effectivePrice = Number(product.price);
+          effectivePurchasePrice = product.purchasePrice ? Number(product.purchasePrice) : 0;
         }
+
+        const commission = effectivePrice * (commissionRate / 100);
+        const profitPerUnit = effectivePrice - effectivePurchasePrice - commission - shippingCost;
+
+        totalStock += effectiveStock;
+        totalStockValue += effectivePurchasePrice * effectiveStock;
+        netProfit += profitPerUnit * effectiveStock;
+
+        if (effectiveStock > 0 && effectiveStock <= criticalThreshold) criticalStockCount++;
       }
 
       return {

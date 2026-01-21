@@ -63,10 +63,12 @@ model User {
   updatedAt                DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  plan             Plan?            @relation(fields: [planId], references: [id])
-  currentCompany   Company?         @relation("CurrentCompany", fields: [currentCompanyId], references: [id])
-  companyMembers   CompanyMember[]
-  refreshTokens    RefreshToken[]
+  plan                  Plan?                  @relation(fields: [planId], references: [id])
+  currentCompany        Company?               @relation("CurrentCompany", fields: [currentCompanyId], references: [id])
+  companyMembers        CompanyMember[]
+  refreshTokens         RefreshToken[]
+  notifications         Notification[]
+  notificationSettings  NotificationSetting[]
 
   @@map("users")
 }
@@ -466,4 +468,54 @@ model WebhookLog {
   @@index([eventType])
   @@index([createdAt])
   @@map("webhook_logs")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+enum NotificationType {
+  NEW_ORDER
+  CRITICAL_STOCK
+  HIGH_VALUE_ORDER
+  REFUND_RECEIVED
+  SYNC_ERROR
+  SYNC_SUCCESS
+  LOW_PROFIT_MARGIN
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  companyId String           @map("company_id")
+  type      NotificationType
+  title     String
+  message   String?
+  data      Json?            // Ek veri (sipariş ID, ürün ID vb.)
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, isRead])
+  @@index([companyId])
+  @@map("notifications")
+}
+
+model NotificationSetting {
+  id               String           @id @default(cuid())
+  userId           String           @map("user_id")
+  notificationType NotificationType @map("notification_type")
+  inAppEnabled     Boolean          @default(true) @map("in_app_enabled")
+  emailEnabled     Boolean          @default(false) @map("email_enabled")
+  thresholdValue   Decimal?         @map("threshold_value") @db.Decimal(10, 2) // Yüksek tutar eşiği
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationType])
+  @@index([userId])
+  @@map("notification_settings")
 }

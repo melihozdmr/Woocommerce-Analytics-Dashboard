@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/stores/authStore';
 import { usePricingStore } from '@/stores/pricingStore';
+import { useCompanyStore } from '@/stores/companyStore';
 
 export function NavUser({
   user,
@@ -47,6 +48,8 @@ export function NavUser({
   const { isMobile } = useSidebar();
   const { logout } = useAuthStore();
   const { isPricingEnabled } = usePricingStore();
+  const { currentCompany } = useCompanyStore();
+  const companySlug = currentCompany?.slug || '';
 
   const getInitials = (name: string, email: string) => {
     if (name) {
@@ -110,7 +113,7 @@ export function NavUser({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
+                  <DropdownMenuItem onClick={() => router.push(`/${companySlug}/settings/billing`)}>
                     <Sparkles />
                     Pro'ya Yükselt
                   </DropdownMenuItem>
@@ -119,17 +122,17 @@ export function NavUser({
             )}
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push('/settings')}>
+              <DropdownMenuItem onClick={() => router.push(`/${companySlug}/settings`)}>
                 <BadgeCheck />
                 Hesap
               </DropdownMenuItem>
               {isPricingEnabled && (
-                <DropdownMenuItem onClick={() => router.push('/settings/billing')}>
+                <DropdownMenuItem onClick={() => router.push(`/${companySlug}/settings/billing`)}>
                   <CreditCard />
                   Faturalandırma
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => router.push('/notifications')}>
+              <DropdownMenuItem onClick={() => router.push(`/${companySlug}/notifications`)}>
                 <Bell />
                 Bildirimler
               </DropdownMenuItem>

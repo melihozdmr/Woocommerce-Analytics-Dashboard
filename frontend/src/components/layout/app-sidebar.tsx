@@ -9,8 +9,6 @@ import {
   CreditCard,
   RotateCcw,
   Settings,
-  LifeBuoy,
-  Send,
   BarChart3,
   Crown,
   Link2,
@@ -30,18 +28,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useCompanyStore } from '@/stores/companyStore';
 import { usePricingStore } from '@/stores/pricingStore';
 
-const navSecondary = [
-  {
-    title: 'Destek',
-    url: '/support',
-    icon: LifeBuoy,
-  },
-  {
-    title: 'Geri Bildirim',
-    url: '/feedback',
-    icon: Send,
-  },
-];
+const navSecondary: never[] = [];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuthStore();

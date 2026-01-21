@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Settings, Building2, Users, CreditCard, Bell, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,12 +47,17 @@ const settingsSections = [
 ];
 
 export default function SettingsPage() {
+  const router = useRouter();
   const { company } = useCompany();
   const { isPricingEnabled, fetchPricingStatus } = usePricingStore();
 
   useEffect(() => {
     fetchPricingStatus();
   }, [fetchPricingStatus]);
+
+  const handleSectionClick = (href: string) => {
+    router.push(`/${company?.slug}/${href}`);
+  };
 
   // Filter sections based on pricing status
   const visibleSections = settingsSections.filter(
@@ -69,7 +75,11 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {visibleSections.map((section) => (
-          <Card key={section.title} className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <Card
+            key={section.title}
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => handleSectionClick(section.href)}
+          >
             <CardHeader className="flex flex-row items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
                 <section.icon className="h-6 w-6 text-primary" />
