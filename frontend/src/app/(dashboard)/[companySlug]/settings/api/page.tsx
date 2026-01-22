@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   Key,
   ChevronLeft,
-  Plus,
   Copy,
   Trash2,
   RotateCcw,
@@ -187,7 +186,6 @@ export default function ApiSettingsPage() {
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
               Yeni API Anahtarı
             </Button>
           </DialogTrigger>

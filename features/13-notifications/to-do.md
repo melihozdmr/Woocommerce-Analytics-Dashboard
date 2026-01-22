@@ -27,25 +27,27 @@
 ## Yapilacaklar
 
 ### Aşama 1: Veritabani - Bildirim Tablolari
-- [ ] 1.1. `notifications` tablosu olustur
+- [x] 1.1. `notifications` tablosu olustur
   - id, user_id, type, title, message, data_json, is_read, created_at
-- [ ] 1.2. `notification_settings` tablosu olustur
+- [x] 1.2. `notification_settings` tablosu olustur
   - user_id, notification_type, in_app_enabled, push_enabled, threshold_value
-- [ ] 1.3. Varsayilan ayarlari ekle
+- [x] 1.3. Varsayilan ayarlari ekle
 
 ### Aşama 2: Backend - Bildirim Servisi
-- [ ] 2.1. `NotificationService` olustur
-- [ ] 2.2. Bildirim olusturma fonksiyonu
-- [ ] 2.3. Bildirim okuma isareti
-- [ ] 2.4. Toplu bildirim silme
-- [ ] 2.5. Bildirim tercihi kontrolu
+- [x] 2.1. `NotificationService` olustur
+- [x] 2.2. Bildirim olusturma fonksiyonu
+- [x] 2.3. Bildirim okuma isareti
+- [x] 2.4. Toplu bildirim silme
+- [x] 2.5. Bildirim tercihi kontrolu
 
 ### Aşama 3: Backend - Bildirim Tipleri
-- [ ] 3.1. `NEW_ORDER` - Yeni siparis
-- [ ] 3.2. `CRITICAL_STOCK` - Kritik stok uyarisi
-- [ ] 3.3. `HIGH_VALUE_ORDER` - Yuksek tutarli siparis
-- [ ] 3.4. `REFUND_RECEIVED` - Iade talebi
-- [ ] 3.5. `SYNC_ERROR` - Senkronizasyon hatasi
+- [x] 3.1. `NEW_ORDER` - Yeni siparis
+- [x] 3.2. `CRITICAL_STOCK` - Kritik stok uyarisi
+- [x] 3.3. `HIGH_VALUE_ORDER` - Yuksek tutarli siparis
+- [x] 3.4. `REFUND_RECEIVED` - Iade talebi
+- [x] 3.5. `SYNC_ERROR` - Senkronizasyon hatasi
+- [x] 3.6. `DAILY_REPORT` - Gunluk rapor e-postasi
+- [x] 3.7. `WEEKLY_REPORT` - Haftalik rapor e-postasi
 
 ### Aşama 4: Backend - Bildirim Tetikleyiciler
 - [ ] 4.1. Siparis senkronizasyonunda yeni siparis kontrolu
@@ -61,13 +63,14 @@
 - [ ] 5.5. Service Worker dosyasi
 
 ### Aşama 6: Backend - API Endpoints
-- [ ] 6.1. `GET /api/notifications` - Bildirim listesi
-- [ ] 6.2. `PUT /api/notifications/:id/read` - Okundu isareti
-- [ ] 6.3. `PUT /api/notifications/read-all` - Tumunu okundu yap
-- [ ] 6.4. `DELETE /api/notifications/:id` - Bildirim sil
-- [ ] 6.5. `GET /api/notifications/settings` - Bildirim ayarlari
-- [ ] 6.6. `PUT /api/notifications/settings` - Ayarlari guncelle
-- [ ] 6.7. `POST /api/notifications/subscribe` - Push subscription
+- [x] 6.1. `GET /api/notifications` - Bildirim listesi
+- [x] 6.2. `PUT /api/notifications/:id/read` - Okundu isareti
+- [x] 6.3. `PUT /api/notifications/read-all` - Tumunu okundu yap
+- [x] 6.4. `DELETE /api/notifications/:id` - Bildirim sil
+- [x] 6.5. `GET /api/notifications/settings` - Bildirim ayarlari
+- [x] 6.6. `PUT /api/notifications/settings` - Ayarlari guncelle
+- [x] 6.7. `PUT /api/notifications/settings/:type` - Tek ayar guncelle
+- [ ] 6.8. `POST /api/notifications/subscribe` - Push subscription
 
 ### Aşama 7: Frontend - Bildirim Zili
 - [ ] 7.1. Header'da bildirim ikonu
@@ -95,10 +98,19 @@
 - [ ] 10.4. Push notification gosterimi
 
 ### Aşama 11: Frontend - Bildirim Ayarlari
-- [ ] 11.1. Ayarlar sayfasinda bildirim bolumu
-- [ ] 11.2. Her bildirim tipi icin toggle
-- [ ] 11.3. Yuksek tutar esigi ayari (input)
+- [x] 11.1. Ayarlar sayfasinda bildirim bolumu
+- [x] 11.2. Her bildirim tipi icin toggle (in-app ve email)
+- [x] 11.3. Yuksek tutar esigi ayari (input)
 - [ ] 11.4. Push notification izni durumu
+
+### Aşama 14: E-posta Sablonlari
+- [x] 14.1. E-posta base template (table-based, 600px, centered)
+- [x] 14.2. E-posta dogrulama kodu sablonu
+- [x] 14.3. Sifre sifirlama e-postasi sablonu
+- [x] 14.4. Sirket davet e-postasi sablonu
+- [x] 14.5. Gunluk rapor e-postasi sablonu
+- [x] 14.6. Haftalik rapor e-postasi sablonu
+- [x] 14.7. PNG logo entegrasyonu (klue-logo.png, klue-symbol.png)
 
 ### Aşama 12: Backend - WebSocket (Gercek Zamanli)
 - [ ] 12.1. Socket.io entegrasyonu

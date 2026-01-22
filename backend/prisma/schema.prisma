@@ -1,4 +1,4 @@
-// Prisma Schema for WooCommerce Analytics Dashboard
+// Prisma Schema for Klue Studio
 // https://pris.ly/d/prisma-schema
 
 generator client {
@@ -33,6 +33,7 @@ enum CompanyRole {
   OWNER
   ADMIN
   MEMBER
+  STOCKIST
 }
 
 enum InviteStatus {
@@ -480,6 +481,8 @@ enum NotificationType {
   SYNC_ERROR
   SYNC_SUCCESS
   LOW_PROFIT_MARGIN
+  DAILY_REPORT
+  WEEKLY_REPORT
 }
 
 model Notification {

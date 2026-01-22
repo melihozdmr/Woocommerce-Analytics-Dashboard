@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { User, ChevronLeft, Save, Loader2, Eye, EyeOff } from 'lucide-react';
+import { User, ChevronLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCompany } from '@/components/providers/CompanyProvider';
@@ -224,10 +224,7 @@ export default function ProfileSettingsPage() {
                 Kaydediliyor...
               </>
             ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Kaydet
-              </>
+              'Kaydet'
             )}
           </Button>
         </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, ChevronLeft, Save, Loader2, Camera, X } from 'lucide-react';
+import { Building2, ChevronLeft, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -164,7 +164,6 @@ export default function CompanySettingsPage() {
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      <Camera className="h-4 w-4 mr-2" />
                       Logo Yükle
                     </Button>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -249,10 +248,7 @@ export default function CompanySettingsPage() {
                 Kaydediliyor...
               </>
             ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Kaydet
-              </>
+              'Kaydet'
             )}
           </Button>
         </div>

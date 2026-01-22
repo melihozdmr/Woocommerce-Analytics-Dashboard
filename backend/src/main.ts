@@ -43,9 +43,9 @@ async function bootstrap() {
   // Swagger API Documentation
   if (nodeEnv !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('WooCommerce Analytics API')
+      .setTitle('Klue Studio API')
       .setDescription(
-        `API documentation for WooCommerce Analytics Dashboard.
+        `API documentation for Klue Studio.
 
 ## Authentication
 

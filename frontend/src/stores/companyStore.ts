@@ -7,7 +7,7 @@ export interface Company {
   name: string;
   slug: string;
   logo?: string;
-  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'STOCKIST';
   createdAt: string;
 }
 

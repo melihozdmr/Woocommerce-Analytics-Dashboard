@@ -5,15 +5,14 @@ import { useRouter } from 'next/navigation';
 import {
   Users,
   ChevronLeft,
-  Plus,
   Trash2,
   Mail,
   Shield,
   Clock,
   CheckCircle2,
   Loader2,
-  UserCog,
   Crown,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +52,7 @@ import { cn } from '@/lib/utils';
 interface Member {
   id: string;
   email: string;
-  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'STOCKIST';
   inviteStatus: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   joinedAt: string | null;
   invitedAt: string | null;
@@ -68,12 +67,14 @@ const roleLabels: Record<string, string> = {
   OWNER: 'Sahip',
   ADMIN: 'Yönetici',
   MEMBER: 'Üye',
+  STOCKIST: 'Stokçu',
 };
 
 const roleIcons: Record<string, React.ElementType> = {
   OWNER: Crown,
   ADMIN: Shield,
   MEMBER: Users,
+  STOCKIST: Package,
 };
 
 export default function TeamSettingsPage() {
@@ -84,7 +85,7 @@ export default function TeamSettingsPage() {
   const [isInviting, setIsInviting] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'ADMIN' | 'MEMBER'>('MEMBER');
+  const [inviteRole, setInviteRole] = useState<'ADMIN' | 'MEMBER' | 'STOCKIST'>('MEMBER');
 
   const fetchMembers = async () => {
     if (!company?.id) return;
@@ -159,7 +160,6 @@ export default function TeamSettingsPage() {
         <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
               Üye Davet Et
             </Button>
           </DialogTrigger>
@@ -182,13 +182,14 @@ export default function TeamSettingsPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Rol</label>
-                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as 'ADMIN' | 'MEMBER')}>
+                <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as 'ADMIN' | 'MEMBER' | 'STOCKIST')}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MEMBER">Üye</SelectItem>
                     <SelectItem value="ADMIN">Yönetici</SelectItem>
+                    <SelectItem value="STOCKIST">Stokçu</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -204,10 +205,7 @@ export default function TeamSettingsPage() {
                     Gönderiliyor...
                   </>
                 ) : (
-                  <>
-                    <Mail className="h-4 w-4 mr-2" />
-                    Davet Gönder
-                  </>
+                  'Davet Gönder'
                 )}
               </Button>
             </DialogFooter>
@@ -346,7 +344,7 @@ export default function TeamSettingsPage() {
                       <div className="col-span-3">
                         <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 rounded-full">
                           <Clock className="h-3 w-3 mr-1" />
-                          Davet Bekliyor
+                          Beklemede
                         </span>
                       </div>
                       <div className="col-span-2 text-right">

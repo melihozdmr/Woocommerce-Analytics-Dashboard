@@ -12,6 +12,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   Info,
+  Calendar,
+  CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -29,34 +31,55 @@ import { cn } from '@/lib/utils';
 const notificationTypeConfig: Record<NotificationType, {
   icon: React.ElementType;
   label: string;
+  description?: string;
+  category: 'notification' | 'report';
 }> = {
   NEW_ORDER: {
     icon: ShoppingCart,
     label: 'Yeni Sipariş',
+    category: 'notification',
   },
   CRITICAL_STOCK: {
     icon: Package,
     label: 'Kritik Stok',
+    category: 'notification',
   },
   HIGH_VALUE_ORDER: {
     icon: ShoppingCart,
     label: 'Yüksek Tutarlı Sipariş',
+    category: 'notification',
   },
   REFUND_RECEIVED: {
     icon: RefreshCw,
     label: 'İade Talebi',
+    category: 'notification',
   },
   SYNC_ERROR: {
     icon: XCircle,
     label: 'Senkronizasyon Hatası',
+    category: 'notification',
   },
   SYNC_SUCCESS: {
     icon: CheckCircle2,
     label: 'Senkronizasyon Başarılı',
+    category: 'notification',
   },
   LOW_PROFIT_MARGIN: {
     icon: TrendingDown,
     label: 'Düşük Kar Marjı',
+    category: 'notification',
+  },
+  DAILY_REPORT: {
+    icon: Calendar,
+    label: 'Günlük Rapor',
+    description: 'Her gün saat 08:00\'de gönderilir',
+    category: 'report',
+  },
+  WEEKLY_REPORT: {
+    icon: CalendarDays,
+    label: 'Haftalık Rapor',
+    description: 'Her Pazartesi saat 08:00\'de gönderilir',
+    category: 'report',
   },
 };
 
@@ -143,53 +166,111 @@ export default function NotificationSettingsPage() {
         <div>
           {isSettingsLoading ? (
             <div className="p-4 space-y-2">
-              {[...Array(7)].map((_, i) => (
+              {[...Array(9)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
           ) : (
-            Object.entries(notificationTypeConfig).map(([type, config], index) => {
-              const setting = getSetting(type as NotificationType);
-              const Icon = config.icon;
+            <>
+              {/* Notifications Section */}
+              {Object.entries(notificationTypeConfig)
+                .filter(([_, config]) => config.category === 'notification')
+                .map(([type, config], index) => {
+                  const setting = getSetting(type as NotificationType);
+                  const Icon = config.icon;
 
-              return (
-                <div
-                  key={type}
-                  className={cn(
-                    'grid grid-cols-12 items-center px-4 py-3 border-b',
-                    index % 2 === 1 && 'bg-muted/30'
-                  )}
-                >
-                  {/* Icon and Label */}
-                  <div className="col-span-8 flex items-center gap-3">
-                    <div className="p-2 rounded-full shrink-0 bg-muted">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
+                  return (
+                    <div
+                      key={type}
+                      className={cn(
+                        'grid grid-cols-12 items-center px-4 py-3 border-b',
+                        index % 2 === 1 && 'bg-muted/30'
+                      )}
+                    >
+                      {/* Icon and Label */}
+                      <div className="col-span-8 flex items-center gap-3">
+                        <div className="p-2 rounded-full shrink-0 bg-muted">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <p className="text-sm font-medium">{config.label}</p>
+                      </div>
+
+                      {/* In-App Toggle */}
+                      <div className="col-span-2 flex justify-center">
+                        <Switch
+                          checked={setting.inAppEnabled}
+                          onCheckedChange={(checked) =>
+                            handleToggle(type as NotificationType, 'inAppEnabled', checked)
+                          }
+                        />
+                      </div>
+
+                      {/* Email Toggle */}
+                      <div className="col-span-2 flex justify-center">
+                        <Switch
+                          checked={setting.emailEnabled}
+                          onCheckedChange={(checked) =>
+                            handleToggle(type as NotificationType, 'emailEnabled', checked)
+                          }
+                        />
+                      </div>
                     </div>
-                    <p className="text-sm font-medium">{config.label}</p>
-                  </div>
+                  );
+                })}
 
-                  {/* In-App Toggle */}
-                  <div className="col-span-2 flex justify-center">
-                    <Switch
-                      checked={setting.inAppEnabled}
-                      onCheckedChange={(checked) =>
-                        handleToggle(type as NotificationType, 'inAppEnabled', checked)
-                      }
-                    />
-                  </div>
+              {/* Reports Section Header */}
+              <div className="px-4 py-2 bg-muted/50 border-b">
+                <span className="text-xs font-medium text-muted-foreground">
+                  E-posta Raporları
+                </span>
+              </div>
 
-                  {/* Email Toggle */}
-                  <div className="col-span-2 flex justify-center">
-                    <Switch
-                      checked={setting.emailEnabled}
-                      onCheckedChange={(checked) =>
-                        handleToggle(type as NotificationType, 'emailEnabled', checked)
-                      }
-                    />
-                  </div>
-                </div>
-              );
-            })
+              {/* Reports Section */}
+              {Object.entries(notificationTypeConfig)
+                .filter(([_, config]) => config.category === 'report')
+                .map(([type, config], index) => {
+                  const setting = getSetting(type as NotificationType);
+                  const Icon = config.icon;
+
+                  return (
+                    <div
+                      key={type}
+                      className={cn(
+                        'grid grid-cols-12 items-center px-4 py-3 border-b',
+                        index % 2 === 1 && 'bg-muted/30'
+                      )}
+                    >
+                      {/* Icon and Label */}
+                      <div className="col-span-8 flex items-center gap-3">
+                        <div className="p-2 rounded-full shrink-0 bg-muted">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{config.label}</p>
+                          {config.description && (
+                            <p className="text-xs text-muted-foreground">{config.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* In-App Toggle - disabled for reports */}
+                      <div className="col-span-2 flex justify-center">
+                        <span className="text-xs text-muted-foreground">-</span>
+                      </div>
+
+                      {/* Email Toggle */}
+                      <div className="col-span-2 flex justify-center">
+                        <Switch
+                          checked={setting.emailEnabled}
+                          onCheckedChange={(checked) =>
+                            handleToggle(type as NotificationType, 'emailEnabled', checked)
+                          }
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+            </>
           )}
         </div>
       </>

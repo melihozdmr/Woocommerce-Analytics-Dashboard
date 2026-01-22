@@ -15,6 +15,8 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +39,8 @@ const notificationIcons: Record<NotificationType, React.ElementType> = {
   SYNC_ERROR: XCircle,
   SYNC_SUCCESS: CheckCircle2,
   LOW_PROFIT_MARGIN: TrendingDown,
+  DAILY_REPORT: Calendar,
+  WEEKLY_REPORT: CalendarDays,
 };
 
 const notificationColors: Record<NotificationType, string> = {
@@ -47,6 +51,8 @@ const notificationColors: Record<NotificationType, string> = {
   SYNC_ERROR: 'text-red-500 bg-red-50',
   SYNC_SUCCESS: 'text-green-500 bg-green-50',
   LOW_PROFIT_MARGIN: 'text-yellow-500 bg-yellow-50',
+  DAILY_REPORT: 'text-indigo-500 bg-indigo-50',
+  WEEKLY_REPORT: 'text-indigo-500 bg-indigo-50',
 };
 
 const notificationTypeLabels: Record<NotificationType, string> = {
@@ -57,6 +63,8 @@ const notificationTypeLabels: Record<NotificationType, string> = {
   SYNC_ERROR: 'Senkronizasyon Hatası',
   SYNC_SUCCESS: 'Senkronizasyon Başarılı',
   LOW_PROFIT_MARGIN: 'Düşük Kar Marjı',
+  DAILY_REPORT: 'Günlük Rapor',
+  WEEKLY_REPORT: 'Haftalık Rapor',
 };
 
 function formatRelativeTime(dateString: string): string {

@@ -8,7 +8,9 @@ export type NotificationType =
   | 'REFUND_RECEIVED'
   | 'SYNC_ERROR'
   | 'SYNC_SUCCESS'
-  | 'LOW_PROFIT_MARGIN';
+  | 'LOW_PROFIT_MARGIN'
+  | 'DAILY_REPORT'
+  | 'WEEKLY_REPORT';
 
 export interface Notification {
   id: string;

@@ -248,11 +248,18 @@ export class CompanyService {
       },
     });
 
+    // Get inviter's name
+    const inviter = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true },
+    });
+
     // Send invite email
     await this.emailService.sendCompanyInvite(
       dto.email,
       invite.company.name,
       inviteToken,
+      inviter?.name || undefined,
     );
 
     return {

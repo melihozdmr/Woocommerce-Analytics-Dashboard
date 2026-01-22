@@ -36,6 +36,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isPricingEnabled } = usePricingStore();
 
   const companySlug = currentCompany?.slug || '';
+  const userRole = currentCompany?.role;
 
   // Build navigation with company-scoped URLs
   const allNavItems = [
@@ -44,55 +45,68 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: `/${companySlug}`,
       icon: LayoutDashboard,
       isActive: true,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     {
       title: 'Mağazalar',
       url: `/${companySlug}/stores`,
       icon: Store,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     {
       title: 'Stoklar',
       url: `/${companySlug}/inventory`,
       icon: Package,
+      roles: ['OWNER', 'ADMIN', 'MEMBER', 'STOCKIST'],
     },
     {
       title: 'Ürün Eşleştirme',
       url: `/${companySlug}/product-mappings`,
       icon: Link2,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     {
       title: 'Siparişler',
       url: `/${companySlug}/orders`,
       icon: ShoppingCart,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     {
       title: 'Ödemeler',
       url: `/${companySlug}/payments`,
       icon: CreditCard,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     {
       title: 'Raporlar',
       url: `/${companySlug}/reports`,
       icon: BarChart3,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     {
       title: 'İadeler',
       url: `/${companySlug}/refunds`,
       icon: RotateCcw,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
     ...(isPricingEnabled ? [{
       title: 'Planlar',
       url: `/${companySlug}/pricing`,
       icon: Crown,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     }] : []),
     {
       title: 'Ayarlar',
       url: `/${companySlug}/settings`,
       icon: Settings,
+      roles: ['OWNER', 'ADMIN', 'MEMBER'],
     },
   ];
 
-  const navMain = allNavItems;
+  // Filter nav items based on user role
+  const navMain = allNavItems.filter((item) =>
+    !userRole || item.roles.includes(userRole)
+  );
 
   const userData = {
     name: user?.name || 'Kullanıcı',
