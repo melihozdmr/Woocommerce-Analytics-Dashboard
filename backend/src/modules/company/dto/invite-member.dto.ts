@@ -4,6 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export enum InviteRole {
   ADMIN = 'ADMIN',
   MEMBER = 'MEMBER',
+  STOCKIST = 'STOCKIST',
 }
 
 export class InviteMemberDto {

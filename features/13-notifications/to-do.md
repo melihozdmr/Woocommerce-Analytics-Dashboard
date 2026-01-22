@@ -252,3 +252,8 @@ self.addEventListener('notificationclick', function(event) {
 - [ ] Clean code kurallarina uygun
 - [ ] Dokumantasyon guncellendi
 - [ ] Git commit atildi
+
+
+Invite etme özelliği çalışmıyor giden mailden sonra kullanıcı linke tıkladığında daveti kabul etme ekranı olmalı sonrasında kullanıcının hesabı yok ise hesap oluşturmalı.. sonra  
+  takıma davet edildiği için takım adımını atlaması lazım. Ayrıca iadeler de çalışmıyor hala.. Sistemden iadeleri çekmiyoruz sanırımn.. onu da seknolizasyon yaparken çekelim..      
+  Ayrıca siparişler kısmında siparişler hep işleniyor yazıyor durumu belirsiz.. onu da düzeltelim..   
