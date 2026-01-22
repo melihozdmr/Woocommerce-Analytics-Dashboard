@@ -110,6 +110,7 @@ export class AuthService {
       message: 'Kayıt başarılı. Doğrulama kodu e-posta adresinize gönderildi',
       email: user.email,
       requiresVerification: true,
+      ...(process.env.SMTP_FALLBACK === 'true' && { verificationCode }),
     };
   }
 

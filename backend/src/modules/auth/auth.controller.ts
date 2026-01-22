@@ -36,8 +36,9 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Yeni kullanıcı kaydı' })
-  @ApiResponse({ status: 201, description: 'Kullanıcı başarıyla oluşturuldu' })
+  @ApiResponse({ status: 200, description: 'Kullanıcı başarıyla oluşturuldu' })
   @ApiResponse({ status: 409, description: 'E-posta zaten kullanılıyor' })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
