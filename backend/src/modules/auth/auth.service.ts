@@ -62,11 +62,12 @@ export class AuthService {
           },
         });
 
-        await this.emailService.sendVerificationCode(
+        // Send email asynchronously (fire-and-forget)
+        this.emailService.sendVerificationCode(
           existingUser.email,
           verificationCode,
           existingUser.name || undefined,
-        );
+        ).catch((err) => console.error('Failed to send verification email:', err));
 
         return {
           message: 'Doğrulama kodu e-posta adresinize gönderildi',
@@ -98,12 +99,12 @@ export class AuthService {
       include: { plan: true },
     });
 
-    // Send verification email
-    await this.emailService.sendVerificationCode(
+    // Send verification email asynchronously (fire-and-forget)
+    this.emailService.sendVerificationCode(
       user.email,
       verificationCode,
       user.name || undefined,
-    );
+    ).catch((err) => console.error('Failed to send verification email:', err));
 
     return {
       message: 'Kayıt başarılı. Doğrulama kodu e-posta adresinize gönderildi',
@@ -189,11 +190,12 @@ export class AuthService {
       },
     });
 
-    await this.emailService.sendVerificationCode(
+    // Send email asynchronously (fire-and-forget)
+    this.emailService.sendVerificationCode(
       user.email,
       verificationCode,
       user.name || undefined,
-    );
+    ).catch((err) => console.error('Failed to send verification email:', err));
 
     return {
       message: 'Yeni doğrulama kodu gönderildi',
@@ -234,11 +236,12 @@ export class AuthService {
         },
       });
 
-      await this.emailService.sendVerificationCode(
+      // Send email asynchronously (fire-and-forget)
+      this.emailService.sendVerificationCode(
         user.email,
         verificationCode,
         user.name || undefined,
-      );
+      ).catch((err) => console.error('Failed to send verification email:', err));
 
       return {
         message: 'E-posta adresiniz doğrulanmamış. Doğrulama kodu gönderildi.',
@@ -344,12 +347,12 @@ export class AuthService {
       },
     });
 
-    // Send password reset email
-    await this.emailService.sendPasswordResetEmail(
+    // Send password reset email asynchronously (fire-and-forget)
+    this.emailService.sendPasswordResetEmail(
       user.email,
       resetToken,
       user.name || undefined,
-    );
+    ).catch((err) => console.error('Failed to send password reset email:', err));
 
     return { message: 'Şifre sıfırlama bağlantısı e-posta adresinize gönderildi' };
   }

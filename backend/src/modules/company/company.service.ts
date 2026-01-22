@@ -254,13 +254,13 @@ export class CompanyService {
       select: { name: true },
     });
 
-    // Send invite email
-    await this.emailService.sendCompanyInvite(
+    // Send invite email asynchronously (fire-and-forget)
+    this.emailService.sendCompanyInvite(
       dto.email,
       invite.company.name,
       inviteToken,
       inviter?.name || undefined,
-    );
+    ).catch((err) => console.error('Failed to send company invite email:', err));
 
     return {
       message: 'Davet gönderildi',
