@@ -1,23 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: nodemailer.Transporter;
+  private resend: Resend;
+  private fromEmail: string;
 
   constructor(private configService: ConfigService) {
-    const port = this.configService.get<number>('SMTP_PORT') || 465;
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port,
-      secure: port === 465,
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
-    });
+    this.resend = new Resend(this.configService.get<string>('RESEND_API_KEY'));
+    this.fromEmail = this.configService.get<string>('RESEND_FROM_EMAIL') || 'onboarding@resend.dev';
   }
 
   private getBaseTemplate(content: string): string {
@@ -110,15 +103,13 @@ export class EmailService {
       </table>
     `;
 
-    const mailOptions = {
-      from: `"${appName}" <${this.configService.get<string>('SMTP_USER')}>`,
-      to: email,
-      subject: `${appName} - E-posta Doğrulama Kodu`,
-      html: this.getBaseTemplate(content),
-    };
-
     try {
-      await this.transporter.sendMail(mailOptions);
+      await this.resend.emails.send({
+        from: `${appName} <${this.fromEmail}>`,
+        to: email,
+        subject: `${appName} - E-posta Doğrulama Kodu`,
+        html: this.getBaseTemplate(content),
+      });
       this.logger.log(`Verification code sent to ${email}`);
       return true;
     } catch (error) {
@@ -171,15 +162,13 @@ export class EmailService {
       </table>
     `;
 
-    const mailOptions = {
-      from: `"${appName}" <${this.configService.get<string>('SMTP_USER')}>`,
-      to: email,
-      subject: `${appName} - Şifre Sıfırlama`,
-      html: this.getBaseTemplate(content),
-    };
-
     try {
-      await this.transporter.sendMail(mailOptions);
+      await this.resend.emails.send({
+        from: `${appName} <${this.fromEmail}>`,
+        to: email,
+        subject: `${appName} - Şifre Sıfırlama`,
+        html: this.getBaseTemplate(content),
+      });
       this.logger.log(`Password reset email sent to ${email}`);
       return true;
     } catch (error) {
@@ -234,15 +223,13 @@ export class EmailService {
       </table>
     `;
 
-    const mailOptions = {
-      from: `"${appName}" <${this.configService.get<string>('SMTP_USER')}>`,
-      to: email,
-      subject: `${companyName} takımına davet edildiniz`,
-      html: this.getBaseTemplate(content),
-    };
-
     try {
-      await this.transporter.sendMail(mailOptions);
+      await this.resend.emails.send({
+        from: `${appName} <${this.fromEmail}>`,
+        to: email,
+        subject: `${companyName} takımına davet edildiniz`,
+        html: this.getBaseTemplate(content),
+      });
       this.logger.log(`Company invite sent to ${email} for ${companyName}`);
       return true;
     } catch (error) {

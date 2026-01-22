@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationType } from '@prisma/client';
 
@@ -32,21 +32,15 @@ interface WeeklyReportData {
 @Injectable()
 export class EmailReportService {
   private readonly logger = new Logger(EmailReportService.name);
-  private transporter: nodemailer.Transporter;
+  private resend: Resend;
+  private fromEmail: string;
 
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port: this.configService.get<number>('SMTP_PORT'),
-      secure: false,
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
-    });
+    this.resend = new Resend(this.configService.get<string>('RESEND_API_KEY'));
+    this.fromEmail = this.configService.get<string>('RESEND_FROM_EMAIL') || 'onboarding@resend.dev';
   }
 
   private getBaseTemplate(content: string): string {
@@ -502,14 +496,12 @@ export class EmailReportService {
       </table>
     `;
 
-    const mailOptions = {
-      from: `"${appName}" <${this.configService.get<string>('SMTP_USER')}>`,
+    await this.resend.emails.send({
+      from: `${appName} <${this.fromEmail}>`,
       to: email,
       subject: `${data.companyName} - Günlük Rapor (${data.date})`,
       html: this.getBaseTemplate(content),
-    };
-
-    await this.transporter.sendMail(mailOptions);
+    });
     this.logger.log(`Daily report sent to ${email} for ${data.companyName}`);
   }
 
@@ -635,14 +627,12 @@ export class EmailReportService {
       </table>
     `;
 
-    const mailOptions = {
-      from: `"${appName}" <${this.configService.get<string>('SMTP_USER')}>`,
+    await this.resend.emails.send({
+      from: `${appName} <${this.fromEmail}>`,
       to: email,
       subject: `${data.companyName} - Haftalık Rapor (${data.startDate} - ${data.endDate})`,
       html: this.getBaseTemplate(content),
-    };
-
-    await this.transporter.sendMail(mailOptions);
+    });
     this.logger.log(`Weekly report sent to ${email} for ${data.companyName}`);
   }
 
